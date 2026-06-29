@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  FakeDecryptionProvider,
-  FakeIndexedEventSource,
-  type IndexedEvent,
-} from "../src/index.js";
+import { FakeDecryptionProvider, FakeIndexedEventSource, type IndexedEvent } from "../src/index.js";
 
 const event: IndexedEvent = {
   kind: "confidential_transfer",

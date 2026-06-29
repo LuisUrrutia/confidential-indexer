@@ -50,15 +50,42 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
         });
 
         if (result.status === "decrypted") {
-          await deps.transfers.markTransferDecrypted({ chainId: transfer.chainId, txHash: transfer.txHash, logIndex: transfer.logIndex, amount: result.amount });
+          await deps.transfers.markTransferDecrypted({
+            chainId: transfer.chainId,
+            txHash: transfer.txHash,
+            logIndex: transfer.logIndex,
+            amount: result.amount,
+          });
           await deps.balances.applyDecryptedTransfer(transfer, result.amount);
-          await deps.attempts.recordAttempt({ chainId: transfer.chainId, tokenAddress: transfer.tokenAddress, txHash: transfer.txHash, logIndex: transfer.logIndex, status: "decrypted", reason: null, message: null });
+          await deps.attempts.recordAttempt({
+            chainId: transfer.chainId,
+            tokenAddress: transfer.tokenAddress,
+            txHash: transfer.txHash,
+            logIndex: transfer.logIndex,
+            status: "decrypted",
+            reason: null,
+            message: null,
+          });
           report.decrypted += 1;
           continue;
         }
 
-        await deps.transfers.markTransferUndecrypted({ chainId: transfer.chainId, txHash: transfer.txHash, logIndex: transfer.logIndex, status: result.status, reason: result.reason });
-        await deps.attempts.recordAttempt({ chainId: transfer.chainId, tokenAddress: transfer.tokenAddress, txHash: transfer.txHash, logIndex: transfer.logIndex, status: result.status, reason: result.reason, message: result.reason });
+        await deps.transfers.markTransferUndecrypted({
+          chainId: transfer.chainId,
+          txHash: transfer.txHash,
+          logIndex: transfer.logIndex,
+          status: result.status,
+          reason: result.reason,
+        });
+        await deps.attempts.recordAttempt({
+          chainId: transfer.chainId,
+          tokenAddress: transfer.tokenAddress,
+          txHash: transfer.txHash,
+          logIndex: transfer.logIndex,
+          status: result.status,
+          reason: result.reason,
+          message: result.reason,
+        });
         if (result.status === "failed") report.failed += 1;
         else report.pending += 1;
       }

@@ -1,10 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { createConfidentialIndexer, FakeDecryptionProvider, FakeIndexedEventSource, type IndexedEvent } from "@confidential-indexer/core";
-import { createPool, PostgresReadModel, PostgresRepositories, runMigrations } from "@confidential-indexer/db";
+import {
+  createConfidentialIndexer,
+  FakeDecryptionProvider,
+  FakeIndexedEventSource,
+  type IndexedEvent,
+} from "@confidential-indexer/core";
+import {
+  createPool,
+  PostgresReadModel,
+  PostgresRepositories,
+  runMigrations,
+} from "@confidential-indexer/db";
 import { createServer } from "../src/http/createServer.js";
 
-const databaseUrl = process.env.DATABASE_URL ?? "postgres://indexer:indexer@localhost:5432/confidential_indexer";
+const databaseUrl =
+  process.env.DATABASE_URL ?? "postgres://indexer:indexer@localhost:5432/confidential_indexer";
 
 function transfer(encryptedAmount: `0x${string}`): IndexedEvent {
   return {
@@ -21,7 +32,10 @@ function transfer(encryptedAmount: `0x${string}`): IndexedEvent {
   };
 }
 
-async function createHarness(events: IndexedEvent[], configureDecryption: (provider: FakeDecryptionProvider) => void) {
+async function createHarness(
+  events: IndexedEvent[],
+  configureDecryption: (provider: FakeDecryptionProvider) => void,
+) {
   const pool = createPool(databaseUrl);
   const schema = `pipeline_${randomUUID().replaceAll("-", "")}`;
   await pool.query(`create schema ${schema}`);
@@ -32,7 +46,15 @@ async function createHarness(events: IndexedEvent[], configureDecryption: (provi
   const readModel = new PostgresReadModel(pool, "hyperindex");
   const provider = new FakeDecryptionProvider();
   configureDecryption(provider);
-  const indexer = createConfidentialIndexer({ sourceName: "hyperindex", eventSource: new FakeIndexedEventSource(events), decryption: provider, transfers: repos.transfers, balances: repos.balances, checkpoints: repos.checkpoints, attempts: repos.attempts });
+  const indexer = createConfidentialIndexer({
+    sourceName: "hyperindex",
+    eventSource: new FakeIndexedEventSource(events),
+    decryption: provider,
+    transfers: repos.transfers,
+    balances: repos.balances,
+    checkpoints: repos.checkpoints,
+    attempts: repos.attempts,
+  });
   const app = createServer({ readModel, indexer, adminApiKey: "secret" });
   return { pool, app, indexer };
 }
@@ -40,15 +62,26 @@ async function createHarness(events: IndexedEvent[], configureDecryption: (provi
 describe("fake end-to-end pipeline", () => {
   it("happy path: event in produces cleartext transfer and balance out", async () => {
     const encryptedAmount = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    const { pool, app, indexer } = await createHarness([transfer(encryptedAmount)], (provider) => provider.setAmount(encryptedAmount, 25n));
+    const { pool, app, indexer } = await createHarness([transfer(encryptedAmount)], (provider) =>
+      provider.setAmount(encryptedAmount, 25n),
+    );
 
     await indexer.ingestNextBatch();
     await indexer.processPendingDecryptions(10);
 
-    const transfers = await app.inject({ method: "GET", url: "/v1/transfers/0x00000000000000000000000000000000000000bb" });
-    const balances = await app.inject({ method: "GET", url: "/v1/balances/0x00000000000000000000000000000000000000bb" });
+    const transfers = await app.inject({
+      method: "GET",
+      url: "/v1/transfers/0x00000000000000000000000000000000000000bb",
+    });
+    const balances = await app.inject({
+      method: "GET",
+      url: "/v1/balances/0x00000000000000000000000000000000000000bb",
+    });
 
-    expect(transfers.json().items[0]).toMatchObject({ amount: "25", decryptionStatus: "decrypted" });
+    expect(transfers.json().items[0]).toMatchObject({
+      amount: "25",
+      decryptionStatus: "decrypted",
+    });
     expect(balances.json().items[0]).toMatchObject({ balance: "25", balanceSource: "events" });
 
     await pool.end();
@@ -56,14 +89,23 @@ describe("fake end-to-end pipeline", () => {
 
   it("negative path: undecryptable event stays visible with null amount", async () => {
     const encryptedAmount = "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
-    const { pool, app, indexer } = await createHarness([transfer(encryptedAmount)], (provider) => provider.failWith({ status: "not_delegated", reason: "missing_delegation" }));
+    const { pool, app, indexer } = await createHarness([transfer(encryptedAmount)], (provider) =>
+      provider.failWith({ status: "not_delegated", reason: "missing_delegation" }),
+    );
 
     await indexer.ingestNextBatch();
     await indexer.processPendingDecryptions(10);
 
-    const transfers = await app.inject({ method: "GET", url: "/v1/transfers/0x00000000000000000000000000000000000000bb" });
+    const transfers = await app.inject({
+      method: "GET",
+      url: "/v1/transfers/0x00000000000000000000000000000000000000bb",
+    });
 
-    expect(transfers.json().items[0]).toMatchObject({ amount: null, decryptionStatus: "not_delegated", decryptionReason: "missing_delegation" });
+    expect(transfers.json().items[0]).toMatchObject({
+      amount: null,
+      decryptionStatus: "not_delegated",
+      decryptionReason: "missing_delegation",
+    });
 
     await pool.end();
   });

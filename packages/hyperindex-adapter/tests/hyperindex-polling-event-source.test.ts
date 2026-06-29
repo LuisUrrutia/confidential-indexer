@@ -27,7 +27,11 @@ describe("HyperindexPollingEventSource", () => {
     const source = new HyperindexPollingEventSource({ pool: new FakePool(), limit: 10 });
     const batch = await source.nextBatch(null);
 
-    expect(batch.events[0]).toMatchObject({ kind: "confidential_transfer", chainId: 31337, logIndex: 0 });
+    expect(batch.events[0]).toMatchObject({
+      kind: "confidential_transfer",
+      chainId: 31337,
+      logIndex: 0,
+    });
     expect(batch.nextCursor).toEqual({ blockNumber: 1n, logIndex: 0 });
   });
 });

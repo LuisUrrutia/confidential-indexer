@@ -1,4 +1,9 @@
-import type { EventCursor, IndexedEvent, IndexedEventBatch, IndexedEventSource } from "@confidential-indexer/core";
+import type {
+  EventCursor,
+  IndexedEvent,
+  IndexedEventBatch,
+  IndexedEventSource,
+} from "@confidential-indexer/core";
 
 export interface QueryablePool {
   query(sql: string, params: unknown[]): Promise<{ rows: Array<Record<string, unknown>> }>;
@@ -22,7 +27,10 @@ export class HyperindexPollingEventSource implements IndexedEventSource {
     );
     const events = result.rows.map((row) => this.mapRow(row));
     const last = events.at(-1);
-    return { events, nextCursor: last ? { blockNumber: last.blockNumber, logIndex: last.logIndex } : cursor };
+    return {
+      events,
+      nextCursor: last ? { blockNumber: last.blockNumber, logIndex: last.logIndex } : cursor,
+    };
   }
 
   private mapRow(row: Record<string, unknown>): IndexedEvent {

@@ -1,9 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { createPool, PostgresReadModel, PostgresRepositories, runMigrations } from "../src/index.js";
+import {
+  createPool,
+  PostgresReadModel,
+  PostgresRepositories,
+  runMigrations,
+} from "../src/index.js";
 import type { IndexedEvent } from "@confidential-indexer/core";
 
-const databaseUrl = process.env.DATABASE_URL ?? "postgres://indexer:indexer@localhost:5432/confidential_indexer";
+const databaseUrl =
+  process.env.DATABASE_URL ?? "postgres://indexer:indexer@localhost:5432/confidential_indexer";
 
 const event: IndexedEvent = {
   kind: "confidential_transfer",
@@ -34,7 +40,12 @@ describe("Postgres repositories", () => {
     const pending = await repos.transfers.listPendingDecryptions(10);
     expect(pending).toHaveLength(1);
 
-    await repos.transfers.markTransferDecrypted({ chainId: event.chainId, txHash: event.txHash, logIndex: event.logIndex, amount: 25n });
+    await repos.transfers.markTransferDecrypted({
+      chainId: event.chainId,
+      txHash: event.txHash,
+      logIndex: event.logIndex,
+      amount: 25n,
+    });
     await repos.balances.applyDecryptedTransfer(pending[0]!, 25n);
 
     const transfers = await readModel.getTransfers({ holder: event.to, limit: 20, offset: 0 });

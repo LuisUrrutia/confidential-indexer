@@ -1,5 +1,10 @@
 import { createConfidentialIndexer } from "@confidential-indexer/core";
-import { createPool, PostgresReadModel, PostgresRepositories, runMigrations } from "@confidential-indexer/db";
+import {
+  createPool,
+  PostgresReadModel,
+  PostgresRepositories,
+  runMigrations,
+} from "@confidential-indexer/db";
 import { HyperindexPollingEventSource } from "@confidential-indexer/hyperindex-adapter";
 import { ZamaDecryptionProvider, type ZamaSdkLike } from "@confidential-indexer/zama";
 import { loadConfig } from "./config.js";
@@ -13,10 +18,15 @@ await runMigrations(appPool);
 
 const repos = new PostgresRepositories(appPool, "hyperindex");
 const readModel = new PostgresReadModel(appPool, "hyperindex");
-const eventSource = new HyperindexPollingEventSource({ pool: hyperindexPool, limit: config.eventSourcePollLimit });
+const eventSource = new HyperindexPollingEventSource({
+  pool: hyperindexPool,
+  limit: config.eventSourcePollLimit,
+});
 
 const decryption = new ZamaDecryptionProvider((_chainId: number): ZamaSdkLike => {
-  throw new Error("Zama SDK factory is not configured for this local stub. Configure it before live delegated decryption.");
+  throw new Error(
+    "Zama SDK factory is not configured for this local stub. Configure it before live delegated decryption.",
+  );
 });
 
 const indexer = createConfidentialIndexer({

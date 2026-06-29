@@ -12,23 +12,39 @@ export interface ZamaTokenLike {
 
 export interface ZamaSdkLike {
   decryption: {
-    delegatedDecryptValues(inputs: Array<{ encryptedValue: `0x${string}`; contractAddress: `0x${string}` }>, delegatorAddress: `0x${string}`): Promise<Record<`0x${string}`, bigint | string | number>>;
+    delegatedDecryptValues(
+      inputs: Array<{ encryptedValue: `0x${string}`; contractAddress: `0x${string}` }>,
+      delegatorAddress: `0x${string}`,
+    ): Promise<Record<`0x${string}`, bigint | string | number>>;
   };
   createToken(address: `0x${string}`): ZamaTokenLike;
 }
 
 export type ZamaSdkFactory = (chainId: number) => ZamaSdkLike;
 
-export function mapZamaError(error: unknown): Exclude<DecryptAmountResult, { status: "decrypted" }> {
+export function mapZamaError(
+  error: unknown,
+): Exclude<DecryptAmountResult, { status: "decrypted" }> {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLowerCase();
-  if (normalized.includes("delegationnotfound") || normalized.includes("no active delegation") || normalized.includes("expired")) {
+  if (
+    normalized.includes("delegationnotfound") ||
+    normalized.includes("no active delegation") ||
+    normalized.includes("expired")
+  ) {
     return { status: "not_delegated", reason: "missing_delegation" };
   }
-  if (normalized.includes("propagat") || normalized.includes("sync") || normalized.includes("acl state")) {
+  if (
+    normalized.includes("propagat") ||
+    normalized.includes("sync") ||
+    normalized.includes("acl state")
+  ) {
     return { status: "retryable_error", reason: "delegation_propagating" };
   }
-  if (normalized.includes("gateway") || (normalized.includes("relayer") && normalized.includes("unavailable"))) {
+  if (
+    normalized.includes("gateway") ||
+    (normalized.includes("relayer") && normalized.includes("unavailable"))
+  ) {
     return { status: "retryable_error", reason: "relayer_unavailable" };
   }
   return { status: "retryable_error", reason: "sdk_error" };

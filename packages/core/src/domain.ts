@@ -63,7 +63,10 @@ export interface DelegationRevokedEvent {
   delegate: Address;
 }
 
-export type IndexedEvent = ConfidentialTransferEvent | DelegationGrantedEvent | DelegationRevokedEvent;
+export type IndexedEvent =
+  | ConfidentialTransferEvent
+  | DelegationGrantedEvent
+  | DelegationRevokedEvent;
 
 export interface IndexedEventBatch {
   events: IndexedEvent[];

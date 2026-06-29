@@ -45,3 +45,7 @@ pnpm test
 ```
 
 The live local fhEVM/Anvil path is documented separately because delegation propagation and relayer behavior are integration concerns, not unit-test prerequisites.
+
+## Pull request validation
+
+GitHub Actions runs on pull requests and pushes to `main`. CI validates linting, formatting, typechecking, Postgres-backed tests, and Docker image buildability. Third-party actions are pinned to full commit SHAs for immutable workflow execution.

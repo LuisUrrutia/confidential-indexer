@@ -50,10 +50,16 @@ export class PostgresRepositories {
 }
 
 class PgCheckpointRepository implements CheckpointRepository {
-  constructor(private readonly pool: Pool, private readonly sourceName: string) {}
+  constructor(
+    private readonly pool: Pool,
+    private readonly sourceName: string,
+  ) {}
 
   async getCursor(): Promise<EventCursor | null> {
-    const result = await this.pool.query("select block_number, log_index from event_checkpoints where source_name = $1", [this.sourceName]);
+    const result = await this.pool.query(
+      "select block_number, log_index from event_checkpoints where source_name = $1",
+      [this.sourceName],
+    );
     const row = result.rows[0];
     if (!row || row.block_number === null || row.log_index === null) return null;
     return { blockNumber: toBigInt(row.block_number), logIndex: Number(row.log_index) };
@@ -78,7 +84,17 @@ class PgTransferRepository implements TransferRepository {
       `insert into transfers (chain_id, token_address, tx_hash, log_index, block_number, block_timestamp, from_address, to_address, encrypted_amount)
        values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        on conflict (chain_id, tx_hash, log_index) do nothing`,
-      [event.chainId, event.tokenAddress.toLowerCase(), event.txHash, event.logIndex, event.blockNumber.toString(), event.blockTimestamp, event.from.toLowerCase(), event.to.toLowerCase(), event.encryptedAmount],
+      [
+        event.chainId,
+        event.tokenAddress.toLowerCase(),
+        event.txHash,
+        event.logIndex,
+        event.blockNumber.toString(),
+        event.blockTimestamp,
+        event.from.toLowerCase(),
+        event.to.toLowerCase(),
+        event.encryptedAmount,
+      ],
     );
   }
 
@@ -90,7 +106,12 @@ class PgTransferRepository implements TransferRepository {
     return result.rows.map(mapTransfer);
   }
 
-  async markTransferDecrypted(input: { chainId: number; txHash: StoredTransfer["txHash"]; logIndex: number; amount: bigint }): Promise<void> {
+  async markTransferDecrypted(input: {
+    chainId: number;
+    txHash: StoredTransfer["txHash"];
+    logIndex: number;
+    amount: bigint;
+  }): Promise<void> {
     await this.pool.query(
       `update transfers set amount = $4, decryption_status = 'decrypted', decryption_reason = null, updated_at = now()
        where chain_id = $1 and tx_hash = $2 and log_index = $3`,
@@ -121,7 +142,14 @@ class PgTransferRepository implements TransferRepository {
        and ($4::text is null or decryption_status = $4)
        order by block_number desc, log_index desc
        limit $5 offset $6`,
-      [query.holder, query.chainId ?? null, query.tokenAddress ?? null, query.decryptionStatus ?? null, query.limit, query.offset],
+      [
+        query.holder,
+        query.chainId ?? null,
+        query.tokenAddress ?? null,
+        query.decryptionStatus ?? null,
+        query.limit,
+        query.offset,
+      ],
     );
     return { items: result.rows.map(mapTransfer), limit: query.limit, offset: query.offset };
   }
@@ -142,7 +170,16 @@ class PgBalanceRepository implements BalanceRepository {
        on conflict (chain_id, token_address, holder) do update set
        balance = excluded.balance, balance_status = excluded.balance_status, balance_source = excluded.balance_source,
        history_completeness = excluded.history_completeness, updated_at = excluded.updated_at`,
-      [record.chainId, record.tokenAddress.toLowerCase(), record.holder.toLowerCase(), record.balance?.toString() ?? null, record.balanceStatus, record.balanceSource, record.historyCompleteness, record.updatedAt],
+      [
+        record.chainId,
+        record.tokenAddress.toLowerCase(),
+        record.holder.toLowerCase(),
+        record.balance?.toString() ?? null,
+        record.balanceStatus,
+        record.balanceSource,
+        record.historyCompleteness,
+        record.updatedAt,
+      ],
     );
   }
 
@@ -168,7 +205,12 @@ class PgBalanceRepository implements BalanceRepository {
     };
   }
 
-  private async upsertDelta(chainId: number, tokenAddress: string, holder: string, delta: bigint): Promise<void> {
+  private async upsertDelta(
+    chainId: number,
+    tokenAddress: string,
+    holder: string,
+    delta: bigint,
+  ): Promise<void> {
     await this.pool.query(
       `insert into balances (chain_id, token_address, holder, balance, balance_status, balance_source, history_completeness)
        values ($1,$2,$3,$4,'known','events','partial')
@@ -195,7 +237,15 @@ class PgDecryptionAttemptRepository implements DecryptionAttemptRepository {
     await this.pool.query(
       `insert into decryption_attempts (chain_id, token_address, tx_hash, log_index, status, reason, message)
        values ($1,$2,$3,$4,$5,$6,$7)`,
-      [input.chainId, input.tokenAddress.toLowerCase(), input.txHash, input.logIndex, input.status, input.reason, input.message],
+      [
+        input.chainId,
+        input.tokenAddress.toLowerCase(),
+        input.txHash,
+        input.logIndex,
+        input.status,
+        input.reason,
+        input.message,
+      ],
     );
   }
 }

@@ -21,7 +21,9 @@ export class FakeIndexedEventSource implements IndexedEventSource {
   async nextBatch(cursor: EventCursor | null): Promise<IndexedEventBatch> {
     const events = cursor
       ? this.#events.filter(
-          (event) => event.blockNumber > cursor.blockNumber || (event.blockNumber === cursor.blockNumber && event.logIndex > cursor.logIndex),
+          (event) =>
+            event.blockNumber > cursor.blockNumber ||
+            (event.blockNumber === cursor.blockNumber && event.logIndex > cursor.logIndex),
         )
       : this.#events;
     const last = events.at(-1);
@@ -41,8 +43,16 @@ export class FakeDecryptionProvider implements DecryptionProvider {
     this.#amounts.set(encryptedAmount, amount);
   }
 
-  setBalance(input: { chainId: number; tokenAddress: Address; holder: Address; balance: bigint }): void {
-    this.#balances.set(this.#balanceKey(input.chainId, input.tokenAddress, input.holder), input.balance);
+  setBalance(input: {
+    chainId: number;
+    tokenAddress: Address;
+    holder: Address;
+    balance: bigint;
+  }): void {
+    this.#balances.set(
+      this.#balanceKey(input.chainId, input.tokenAddress, input.holder),
+      input.balance,
+    );
   }
 
   failWith(result: Exclude<DecryptAmountResult, { status: "decrypted" }>): void {
@@ -57,7 +67,9 @@ export class FakeDecryptionProvider implements DecryptionProvider {
   }
 
   async refreshCurrentBalance(input: RefreshBalanceInput): Promise<RefreshBalanceResult> {
-    const balance = this.#balances.get(this.#balanceKey(input.chainId, input.tokenAddress, input.holder));
+    const balance = this.#balances.get(
+      this.#balanceKey(input.chainId, input.tokenAddress, input.holder),
+    );
     if (balance === undefined) return { status: "unknown", reason: "missing_delegation" };
     return { status: "known", balance, source: "direct_decrypt" };
   }

@@ -1,8 +1,8 @@
 {
   "name": "@confidential-indexer/api",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",

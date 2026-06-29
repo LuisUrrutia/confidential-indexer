@@ -2,7 +2,6 @@
   "name": "confidential-indexer",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@9.15.4",
   "scripts": {
     "build": "turbo build",
     "dev:db": "docker compose -f compose.dev.yaml up -d postgres",
@@ -15,11 +14,13 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "oxfmt": "^0.56.0",
     "oxlint": "^0.15.12",
     "prettier": "^3.4.2",
     "tsx": "^4.19.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
-  }
+  },
+  "packageManager": "pnpm@9.15.4"
 }

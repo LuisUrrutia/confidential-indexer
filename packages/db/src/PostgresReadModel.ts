@@ -1,11 +1,21 @@
-import type { HealthSnapshot, ReadModel, BalanceQuery, BalancePage, TransferQuery, TransferPage } from "@confidential-indexer/core";
+import type {
+  HealthSnapshot,
+  ReadModel,
+  BalanceQuery,
+  BalancePage,
+  TransferQuery,
+  TransferPage,
+} from "@confidential-indexer/core";
 import type { Pool } from "./connection.js";
 import { PostgresRepositories } from "./PostgresRepositories.js";
 
 export class PostgresReadModel implements ReadModel {
   private readonly repos: PostgresRepositories;
 
-  constructor(private readonly pool: Pool, sourceName: string) {
+  constructor(
+    private readonly pool: Pool,
+    sourceName: string,
+  ) {
     this.repos = new PostgresRepositories(pool, sourceName);
   }
 
