@@ -1,0 +1,17 @@
+{
+  "name": "@confidential-indexer/hyperindex",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@zama-fhe/sdk": "alpha",
+    "viem": "^2.21.55"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

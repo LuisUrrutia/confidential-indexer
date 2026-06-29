@@ -1,0 +1,23 @@
+{
+  "name": "@confidential-indexer/api",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@confidential-indexer/core": "workspace:*",
+    "@confidential-indexer/db": "workspace:*",
+    "@confidential-indexer/hyperindex-adapter": "workspace:*",
+    "@confidential-indexer/zama": "workspace:*",
+    "fastify": "^5.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

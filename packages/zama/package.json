@@ -1,0 +1,20 @@
+{
+  "name": "@confidential-indexer/zama",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@confidential-indexer/core": "workspace:*",
+    "@zama-fhe/sdk": "alpha",
+    "ethers": "^6.13.4",
+    "viem": "^2.21.55"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
