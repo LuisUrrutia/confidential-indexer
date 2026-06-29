@@ -9,6 +9,7 @@ import {
   type Hex,
   type PublicClient,
 } from "viem";
+import { toDate, toExpirationDate } from "./time.js";
 
 interface TokenConfig {
   address: Address;
@@ -70,15 +71,6 @@ function readNetworks(): NetworkConfig[] {
   };
   if (process.env.NETWORK_NAME) fallbackNetwork.name = process.env.NETWORK_NAME;
   return [fallbackNetwork];
-}
-
-function toDate(seconds: bigint): Date {
-  return new Date(Number(seconds) * 1000);
-}
-
-function toExpirationDate(seconds: bigint): Date | null {
-  if (seconds === 0n || seconds > BigInt(Number.MAX_SAFE_INTEGER / 1000)) return null;
-  return toDate(seconds);
 }
 
 function isTokenAddress(tokens: Map<string, Address>, address: Address): Address | null {

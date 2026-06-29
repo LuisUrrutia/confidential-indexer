@@ -47,9 +47,10 @@ function parseNetworks(env: NodeJS.ProcessEnv): AppConfig["networks"] {
       );
     }
 
-    const relayerApiKey = network.relayerApiKeyEnv
+    const maybeRelayerApiKey = network.relayerApiKeyEnv
       ? env[network.relayerApiKeyEnv]
       : env.RELAYER_API_KEY;
+    const relayerApiKey = maybeRelayerApiKey || undefined;
 
     return resolvedNetworkSchema.parse({
       ...network,
