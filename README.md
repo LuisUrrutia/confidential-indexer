@@ -2,6 +2,12 @@
 
 A TypeScript Node submission for indexing ERC-7984 confidential token activity with Hyperindex, delegated Zama decryption, Postgres read models, and partner-friendly HTTP APIs.
 
+## Prerequisites
+
+- Node.js 22+
+- pnpm 9+
+- Docker Desktop or another Docker runtime
+
 ## Local setup
 
 ```bash
@@ -13,21 +19,52 @@ pnpm typecheck
 pnpm lint
 ```
 
-## Services
+## Run with Docker Compose
 
-- `apps/hyperindex`: chain indexing configuration and event capture.
-- `apps/api`: decryption workers and HTTP API.
-- `packages/core`: domain interfaces and orchestration.
-- `packages/db`: Postgres schema and read-model adapters.
-- `packages/zama`: Zama SDK adapter.
-- `packages/hyperindex-adapter`: adapter from Hyperindex output to normalized events.
+Development mode with bind mounts and `tsx`:
 
-## API preview
+```bash
+cp .env.example .env
+docker compose -f compose.dev.yaml up --build
+```
 
-- `GET /v1/balances/:holder`
-- `GET /v1/transfers/:holder`
-- `GET /v1/health`
-- `POST /admin/backfill`
+Prod-like local/demo mode with an optimized API image:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Then call:
+
+```bash
+curl http://127.0.0.1:3000/v1/health
+```
+
+## Run API without Docker
+
+```bash
+pnpm dev:db
+pnpm --filter @confidential-indexer/api dev
+```
+
+## API
+
+### `GET /v1/balances/:holder`
+
+Returns cleartext balances where known. Balance values are strings because token amounts can exceed JavaScript's safe integer range.
+
+### `GET /v1/transfers/:holder`
+
+Returns paginated transfer history. If an amount is not decrypted yet, `amount` is `null` and `decryptionStatus` plus `decryptionReason` explain why.
+
+### `POST /admin/backfill`
+
+Requires `x-admin-api-key`. Triggers transfer retry and direct current-balance refresh for a holder/token/network tuple.
+
+## Pull request validation
+
+GitHub Actions runs on pull requests and pushes to `main`. CI validates linting, formatting, typechecking, Postgres-backed tests, and Docker image buildability. Third-party actions are pinned to full commit SHAs for immutable workflow execution.
 
 ## Tests
 
@@ -44,8 +81,15 @@ pnpm dev:db
 pnpm test
 ```
 
-The live local fhEVM/Anvil path is documented separately because delegation propagation and relayer behavior are integration concerns, not unit-test prerequisites.
+## Live network notes
 
-## Pull request validation
+The design supports local fhEVM/Anvil first and Sepolia through static configuration. Real delegated decryption requires a configured Indexer Signer for the network and holder delegations for the relevant ERC-7984 token contracts.
 
-GitHub Actions runs on pull requests and pushes to `main`. CI validates linting, formatting, typechecking, Postgres-backed tests, and Docker image buildability. Third-party actions are pinned to full commit SHAs for immutable workflow execution.
+## Project layout
+
+- `apps/hyperindex`: chain indexing configuration and event capture.
+- `apps/api`: decryption workers and HTTP API.
+- `packages/core`: domain interfaces and orchestration.
+- `packages/db`: Postgres schema and read-model adapters.
+- `packages/zama`: Zama SDK adapter.
+- `packages/hyperindex-adapter`: adapter from Hyperindex output to normalized events.
