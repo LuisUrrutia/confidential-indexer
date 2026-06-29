@@ -1,0 +1,9 @@
+node_modules
+.pnpm-store
+.turbo
+**/dist
+out
+cache
+.env
+.env.*
+!.env.example

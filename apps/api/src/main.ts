@@ -6,7 +6,11 @@ import {
   runMigrations,
 } from "@confidential-indexer/db";
 import { HyperindexPollingEventSource } from "@confidential-indexer/hyperindex-adapter";
-import { ZamaDecryptionProvider, type ZamaSdkLike } from "@confidential-indexer/zama";
+import {
+  createZamaSdkFactory,
+  type ZamaNetworkConfig,
+  ZamaDecryptionProvider,
+} from "@confidential-indexer/zama";
 import { loadConfig } from "./config.js";
 import { createServer } from "./http/createServer.js";
 import { runLoop } from "./workers/runLoop.js";
@@ -23,11 +27,23 @@ const eventSource = new HyperindexPollingEventSource({
   limit: config.eventSourcePollLimit,
 });
 
-const decryption = new ZamaDecryptionProvider((_chainId: number): ZamaSdkLike => {
-  throw new Error(
-    "Zama SDK factory is not configured for this local stub. Configure it before live delegated decryption.",
-  );
+const zamaNetworks = config.networks.map((network): ZamaNetworkConfig => {
+  const zamaNetwork: ZamaNetworkConfig = {
+    chainId: network.chainId,
+    rpcUrl: network.rpcUrl,
+    indexerSignerPrivateKey:
+      network.indexerSignerPrivateKey as ZamaNetworkConfig["indexerSignerPrivateKey"],
+  };
+  if (network.name) zamaNetwork.name = network.name;
+  if (network.relayerUrl) zamaNetwork.relayerUrl = network.relayerUrl;
+  if (network.relayerApiKey) zamaNetwork.relayerApiKey = network.relayerApiKey;
+  return zamaNetwork;
 });
+
+const sdkForChain = createZamaSdkFactory({
+  networks: zamaNetworks,
+});
+const decryption = new ZamaDecryptionProvider(sdkForChain);
 
 const indexer = createConfidentialIndexer({
   sourceName: "hyperindex",

@@ -81,9 +81,44 @@ pnpm dev:db
 pnpm test
 ```
 
-## Live network notes
+## Live Sepolia harness
 
-The design supports local fhEVM/Anvil first and Sepolia through static configuration. Real delegated decryption requires a configured Indexer Signer for the network and holder delegations for the relevant ERC-7984 token contracts.
+The live path uses the real Zama SDK, a Foundry-deployed `ConfidentialTestToken`, a generated owner/transfer account, and a generated Indexer Signer delegated for user decryption. Do not commit `.env.live`; it contains private keys.
+
+```bash
+pnpm live:accounts
+```
+
+Edit `.env.live`:
+
+- set `RPC_URL` to a funded Sepolia RPC endpoint;
+- set `RELAYER_API_KEY` for the Zama relayer;
+- fund `OWNER_ADDRESS` for deployment/transfer gas;
+- fund `INDEXER_SIGNER_ADDRESS` if your relayer/account policy requires gas for the delegate signer.
+
+Then run:
+
+```bash
+pnpm live:deploy
+pnpm live:transfer
+pnpm live:scan
+pnpm dev:db
+set -a; source .env.live; set +a
+pnpm --filter @confidential-indexer/api dev
+```
+
+In another terminal with the same environment loaded:
+
+```bash
+set -a; source .env.live; set +a
+curl -H "x-admin-api-key: $ADMIN_API_KEY" \
+  -H "content-type: application/json" \
+  --data "{\"chainId\":$CHAIN_ID,\"tokenAddress\":\"$TOKEN_ADDRESS\",\"holder\":\"$OWNER_ADDRESS\"}" \
+  http://127.0.0.1:3000/admin/backfill
+curl "http://127.0.0.1:3000/v1/transfers/$OWNER_ADDRESS?chainId=$CHAIN_ID&tokenAddress=$TOKEN_ADDRESS"
+```
+
+Delegation can take 1-2 minutes to propagate through the gateway. During that window transfer amounts remain `null` with a retryable `decryptionReason`; rerun `pnpm live:scan` and `POST /admin/backfill` after propagation.
 
 ## Project layout
 
