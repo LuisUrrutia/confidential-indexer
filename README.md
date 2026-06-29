@@ -28,3 +28,20 @@ pnpm lint
 - `GET /v1/transfers/:holder`
 - `GET /v1/health`
 - `POST /admin/backfill`
+
+## Tests
+
+The automated tests use deterministic fakes for Hyperindex output and Zama decryption. This keeps CI fast while proving the required path:
+
+```text
+indexed event -> delegated decryption result -> Postgres read model -> HTTP API
+```
+
+Run:
+
+```bash
+pnpm dev:db
+pnpm test
+```
+
+The live local fhEVM/Anvil path is documented separately because delegation propagation and relayer behavior are integration concerns, not unit-test prerequisites.
