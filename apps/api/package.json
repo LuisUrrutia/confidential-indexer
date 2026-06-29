@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "dev": "tsx src/main.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "pnpm --filter @confidential-indexer/core build && pnpm --filter @confidential-indexer/db build && pnpm --filter @confidential-indexer/hyperindex-adapter build && pnpm --filter @confidential-indexer/zama build && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@confidential-indexer/core": "workspace:*",
