@@ -1,0 +1,11 @@
+.git
+node_modules
+**/node_modules
+**/dist
+.pnpm-store
+.env
+.env.*
+!.env.example
+coverage
+.DS_Store
+docs/superpowers/plans

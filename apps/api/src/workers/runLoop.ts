@@ -9,6 +9,8 @@ export function runLoop(indexer: ConfidentialIndexer, intervalMs: number): { sto
     if (stopped) return;
     try {
       await runOnce(indexer);
+    } catch (error) {
+      console.error("worker tick failed", error);
     } finally {
       if (!stopped) timeout = setTimeout(tick, intervalMs);
     }

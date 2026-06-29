@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: indexer
       POSTGRES_DB: confidential_indexer
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-dev-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -16,9 +16,9 @@ services:
       retries: 20
 
   api:
-    build:
-      context: .
-      target: api
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -lc "corepack enable && pnpm install && pnpm build && pnpm --filter @confidential-indexer/api dev"
     env_file:
       - .env
     environment:
@@ -26,12 +26,17 @@ services:
       HYPERINDEX_DATABASE_URL: postgres://indexer:indexer@postgres:5432/confidential_indexer
       API_HOST: 0.0.0.0
       API_PORT: 3000
+    volumes:
+      - .:/app
+      - pnpm-store:/pnpm
+      - node-modules:/app/node_modules
     ports:
       - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
 
 volumes:
-  postgres-data:
+  postgres-dev-data:
+  pnpm-store:
+  node-modules:
