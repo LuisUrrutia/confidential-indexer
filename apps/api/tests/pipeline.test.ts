@@ -1,11 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { createConfidentialIndexer, type IndexedEvent } from "@confidential-indexer/core";
 import {
-  createConfidentialIndexer,
-  FakeDecryptionProvider,
-  FakeIndexedEventSource,
-  type IndexedEvent,
-} from "@confidential-indexer/core";
+  InMemoryDecryptionProvider,
+  InMemoryIndexedEventSource,
+} from "@confidential-indexer/core/testing";
 import {
   createPool,
   PostgresReadModel,
@@ -34,7 +33,7 @@ function transfer(encryptedAmount: `0x${string}`): IndexedEvent {
 
 async function createHarness(
   events: IndexedEvent[],
-  configureDecryption: (provider: FakeDecryptionProvider) => void,
+  configureDecryption: (provider: InMemoryDecryptionProvider) => void,
 ) {
   const pool = createPool(databaseUrl);
   const schema = `pipeline_${randomUUID().replaceAll("-", "")}`;
@@ -44,11 +43,11 @@ async function createHarness(
 
   const repos = new PostgresRepositories(pool, "hyperindex");
   const readModel = new PostgresReadModel(pool, "hyperindex");
-  const provider = new FakeDecryptionProvider();
+  const provider = new InMemoryDecryptionProvider();
   configureDecryption(provider);
   const indexer = createConfidentialIndexer({
     sourceName: "hyperindex",
-    eventSource: new FakeIndexedEventSource(events),
+    eventSource: new InMemoryIndexedEventSource(events),
     decryption: provider,
     transfers: repos.transfers,
     balances: repos.balances,

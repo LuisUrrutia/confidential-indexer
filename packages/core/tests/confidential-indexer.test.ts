@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   createConfidentialIndexer,
-  FakeDecryptionProvider,
-  FakeIndexedEventSource,
   type BatchDecryptTransferAmountResult,
   type BatchDecryptTransferAmountsInput,
   type DecryptionProvider,
@@ -17,6 +15,7 @@ import {
   type DelegationRepository,
   type RefreshBalanceResult,
 } from "../src/index.js";
+import { InMemoryDecryptionProvider, InMemoryIndexedEventSource } from "../src/testing/index.js";
 
 const transfer: IndexedEvent = {
   kind: "confidential_transfer",
@@ -297,11 +296,11 @@ class BatchOnlyDecryptionProvider implements DecryptionProvider {
 describe("ConfidentialIndexer", () => {
   it("ingests, decrypts, records attempts, and updates balances", async () => {
     const repos = createMemoryRepos();
-    const decryption = new FakeDecryptionProvider();
+    const decryption = new InMemoryDecryptionProvider();
     decryption.setAmount(transfer.encryptedAmount, 25n);
     const indexer = createConfidentialIndexer({
       sourceName: "hyperindex",
-      eventSource: new FakeIndexedEventSource([transfer]),
+      eventSource: new InMemoryIndexedEventSource([transfer]),
       decryption,
       transfers: repos.transferRepo,
       balances: repos.balanceRepo,
@@ -343,7 +342,7 @@ describe("ConfidentialIndexer", () => {
     const decryption = new BatchOnlyDecryptionProvider(amounts);
     const indexer = createConfidentialIndexer({
       sourceName: "hyperindex",
-      eventSource: new FakeIndexedEventSource([transfer, secondTransfer]),
+      eventSource: new InMemoryIndexedEventSource([transfer, secondTransfer]),
       decryption,
       transfers: repos.transferRepo,
       balances: repos.balanceRepo,
@@ -389,7 +388,7 @@ describe("ConfidentialIndexer", () => {
     const decryption = new BatchOnlyDecryptionProvider(amounts);
     const indexer = createConfidentialIndexer({
       sourceName: "hyperindex",
-      eventSource: new FakeIndexedEventSource([unshieldRequest, secondUnshieldRequest]),
+      eventSource: new InMemoryIndexedEventSource([unshieldRequest, secondUnshieldRequest]),
       decryption,
       transfers: repos.transferRepo,
       balances: repos.balanceRepo,
@@ -420,11 +419,11 @@ describe("ConfidentialIndexer", () => {
 
   it("keeps undecryptable events queryable", async () => {
     const repos = createMemoryRepos();
-    const decryption = new FakeDecryptionProvider();
+    const decryption = new InMemoryDecryptionProvider();
     decryption.failWith({ status: "not_delegated", reason: "missing_delegation" });
     const indexer = createConfidentialIndexer({
       sourceName: "hyperindex",
-      eventSource: new FakeIndexedEventSource([transfer]),
+      eventSource: new InMemoryIndexedEventSource([transfer]),
       decryption,
       transfers: repos.transferRepo,
       balances: repos.balanceRepo,
@@ -448,11 +447,11 @@ describe("ConfidentialIndexer", () => {
 
   it("decrypts pending unshield requests into activity history", async () => {
     const repos = createMemoryRepos();
-    const decryption = new FakeDecryptionProvider();
+    const decryption = new InMemoryDecryptionProvider();
     decryption.setAmount(unshieldRequest.encryptedAmount, 40n);
     const indexer = createConfidentialIndexer({
       sourceName: "hyperindex",
-      eventSource: new FakeIndexedEventSource([unshieldRequest]),
+      eventSource: new InMemoryIndexedEventSource([unshieldRequest]),
       decryption,
       transfers: repos.transferRepo,
       balances: repos.balanceRepo,

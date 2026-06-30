@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FakeDecryptionProvider, FakeIndexedEventSource, type IndexedEvent } from "../src/index.js";
+import type { IndexedEvent } from "../src/index.js";
+import { InMemoryDecryptionProvider, InMemoryIndexedEventSource } from "../src/testing/index.js";
 
 const event: IndexedEvent = {
   kind: "confidential_transfer",
@@ -14,9 +15,9 @@ const event: IndexedEvent = {
   encryptedAmount: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 };
 
-describe("core fakes", () => {
+describe("core testing adapters", () => {
   it("returns indexed events after a cursor", async () => {
-    const source = new FakeIndexedEventSource([event]);
+    const source = new InMemoryIndexedEventSource([event]);
 
     const batch = await source.nextBatch(null);
 
@@ -25,7 +26,7 @@ describe("core fakes", () => {
   });
 
   it("returns configured fake decrypted amounts", async () => {
-    const provider = new FakeDecryptionProvider();
+    const provider = new InMemoryDecryptionProvider();
     provider.setAmount(event.encryptedAmount, 25n);
 
     const result = await provider.decryptTransferAmount({

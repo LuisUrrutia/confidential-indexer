@@ -159,9 +159,12 @@ export interface BatchDecryptTransferAmountResult {
   result: DecryptAmountResult;
 }
 
-export type DecryptAmountResult =
-  | { status: "decrypted"; amount: bigint }
-  | { status: Exclude<DecryptionStatus, "decrypted">; reason: Exclude<DecryptionReason, null> };
+export interface UndecryptedAmountResult {
+  status: Exclude<DecryptionStatus, "decrypted">;
+  reason: Exclude<DecryptionReason, null>;
+}
+
+export type DecryptAmountResult = { status: "decrypted"; amount: bigint } | UndecryptedAmountResult;
 
 export interface RefreshBalanceInput {
   chainId: number;

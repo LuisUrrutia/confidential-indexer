@@ -9,34 +9,11 @@ import type {
   StoredActivity,
   StoredTransfer,
 } from "./domain.js";
-import type {
-  ActivityRepository,
-  ConfidentialIndexer,
-  DecryptionAttemptRepository,
-  DecryptionProvider,
-  BalanceRepository,
-  CheckpointRepository,
-  DelegationRepository,
-  IndexedEventSource,
-  TransferRepository,
-} from "./interfaces.js";
-
-const zeroAddress = "0x0000000000000000000000000000000000000000";
-
-export interface ConfidentialIndexerDeps {
-  sourceName: string;
-  eventSource: IndexedEventSource;
-  decryption: DecryptionProvider;
-  transfers: TransferRepository;
-  activities: ActivityRepository;
-  delegations: DelegationRepository;
-  balances: BalanceRepository;
-  checkpoints: CheckpointRepository;
-  attempts: DecryptionAttemptRepository;
-}
+import { ZERO_ADDRESS } from "./constants.js";
+import type { ConfidentialIndexer, ConfidentialIndexerDeps } from "./interfaces.js";
 
 function isUsableCandidate(address: Address): boolean {
-  return address.toLowerCase() !== zeroAddress;
+  return address.toLowerCase() !== ZERO_ADDRESS;
 }
 
 function chooseUndecryptedResult(

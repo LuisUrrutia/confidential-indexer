@@ -186,3 +186,15 @@ export interface ConfidentialIndexer {
   processPendingDecryptions(limit?: number): Promise<DecryptionReport>;
   backfillHolder(input: BackfillHolderInput): Promise<BackfillReport>;
 }
+
+export interface ConfidentialIndexerDeps {
+  sourceName: string;
+  eventSource: IndexedEventSource;
+  decryption: DecryptionProvider;
+  transfers: TransferRepository;
+  activities: ActivityRepository;
+  delegations: DelegationRepository;
+  balances: BalanceRepository;
+  checkpoints: CheckpointRepository;
+  attempts: DecryptionAttemptRepository;
+}

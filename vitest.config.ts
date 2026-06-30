@@ -4,6 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@confidential-indexer/core/testing": fileURLToPath(
+        new URL("./packages/core/src/testing/index.ts", import.meta.url),
+      ),
       "@confidential-indexer/core": fileURLToPath(
         new URL("./packages/core/src/index.ts", import.meta.url),
       ),

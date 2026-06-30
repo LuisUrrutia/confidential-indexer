@@ -10,10 +10,11 @@ import type {
   IndexedEventBatch,
   RefreshBalanceInput,
   RefreshBalanceResult,
-} from "./domain.js";
-import type { DecryptionProvider, IndexedEventSource } from "./interfaces.js";
+  UndecryptedAmountResult,
+} from "../domain.js";
+import type { DecryptionProvider, IndexedEventSource } from "../interfaces.js";
 
-export class FakeIndexedEventSource implements IndexedEventSource {
+export class InMemoryIndexedEventSource implements IndexedEventSource {
   readonly #events: IndexedEvent[];
 
   constructor(events: IndexedEvent[]) {
@@ -36,10 +37,10 @@ export class FakeIndexedEventSource implements IndexedEventSource {
   }
 }
 
-export class FakeDecryptionProvider implements DecryptionProvider {
+export class InMemoryDecryptionProvider implements DecryptionProvider {
   readonly #amounts = new Map<Hex, bigint>();
   readonly #balances = new Map<string, bigint>();
-  #failure: DecryptAmountResult | null = null;
+  #failure: UndecryptedAmountResult | null = null;
 
   setAmount(encryptedAmount: Hex, amount: bigint): void {
     this.#amounts.set(encryptedAmount, amount);
@@ -57,7 +58,7 @@ export class FakeDecryptionProvider implements DecryptionProvider {
     );
   }
 
-  failWith(result: Exclude<DecryptAmountResult, { status: "decrypted" }>): void {
+  failWith(result: UndecryptedAmountResult): void {
     this.#failure = result;
   }
 
