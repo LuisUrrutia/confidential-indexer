@@ -5,6 +5,15 @@ create table if not exists event_checkpoints (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists source_heads (
+  source_name text not null,
+  chain_id integer not null,
+  token_address text not null,
+  head_block numeric not null,
+  updated_at timestamptz not null default now(),
+  primary key (source_name, chain_id, token_address)
+);
+
 create table if not exists transfers (
   chain_id integer not null,
   token_address text not null,
@@ -18,13 +27,43 @@ create table if not exists transfers (
   amount numeric,
   decryption_status text not null default 'pending',
   decryption_reason text,
+  decrypted_by text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (chain_id, tx_hash, log_index)
 );
 
+alter table transfers add column if not exists decrypted_by text;
+
 create index if not exists transfers_holder_idx on transfers (chain_id, token_address, from_address, to_address, block_number desc, log_index desc);
 create index if not exists transfers_status_idx on transfers (decryption_status, block_number asc, log_index asc);
+create index if not exists transfers_holder_status_idx on transfers (chain_id, token_address, from_address, to_address, decryption_status);
+
+create table if not exists activities (
+  chain_id integer not null,
+  token_address text not null,
+  tx_hash text not null,
+  log_index integer not null,
+  block_number numeric not null,
+  block_timestamp timestamptz not null,
+  kind text not null,
+  from_address text,
+  to_address text,
+  receiver text,
+  encrypted_amount text,
+  amount numeric,
+  unwrap_request_id text,
+  decryption_status text not null default 'pending',
+  decryption_reason text,
+  decrypted_by text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (chain_id, tx_hash, log_index)
+);
+
+create index if not exists activities_holder_idx on activities (chain_id, token_address, from_address, to_address, receiver, block_number desc, log_index desc);
+create index if not exists activities_status_idx on activities (decryption_status, block_number asc, log_index asc);
+create index if not exists activities_kind_idx on activities (kind, block_number desc, log_index desc);
 
 create table if not exists balances (
   chain_id integer not null,
@@ -48,6 +87,8 @@ create table if not exists delegations (
   updated_at timestamptz not null default now(),
   primary key (chain_id, token_address, delegator, delegate)
 );
+
+create index if not exists delegations_active_idx on delegations (chain_id, token_address, active, delegator);
 
 create table if not exists decryption_attempts (
   id bigserial primary key,

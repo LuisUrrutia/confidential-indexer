@@ -19,54 +19,75 @@ export type DecryptionReason =
 export type BalanceStatus = "known" | "unknown";
 export type BalanceSource = "events" | "direct_decrypt" | "none";
 export type HistoryCompleteness = "complete" | "partial" | "unknown";
+export type TokenActivityKind =
+  | "confidential_transfer"
+  | "shield"
+  | "unshield_requested"
+  | "unshield_finalized";
 
 export interface EventCursor {
   blockNumber: bigint;
   logIndex: number;
 }
 
-export interface ConfidentialTransferEvent {
-  kind: "confidential_transfer";
+export interface IndexedEventBase {
   chainId: number;
   tokenAddress: Address;
   txHash: Hex;
   logIndex: number;
   blockNumber: bigint;
   blockTimestamp: Date;
+}
+
+export interface ConfidentialTransferEvent extends IndexedEventBase {
+  kind: "confidential_transfer";
   from: Address;
   to: Address;
   encryptedAmount: Hex;
 }
 
-export interface DelegationGrantedEvent {
+export interface ShieldEvent extends IndexedEventBase {
+  kind: "shield";
+  to: Address;
+  encryptedAmount: Hex;
+  amount: bigint;
+}
+
+export interface UnshieldRequestedEvent extends IndexedEventBase {
+  kind: "unshield_requested";
+  receiver: Address;
+  encryptedAmount: Hex;
+  unwrapRequestId: Hex | null;
+}
+
+export interface UnshieldFinalizedEvent extends IndexedEventBase {
+  kind: "unshield_finalized";
+  receiver: Address;
+  encryptedAmount: Hex;
+  amount: bigint;
+  unwrapRequestId: Hex | null;
+}
+
+export interface DelegationGrantedEvent extends IndexedEventBase {
   kind: "delegation_granted";
-  chainId: number;
-  tokenAddress: Address;
-  txHash: Hex;
-  logIndex: number;
-  blockNumber: bigint;
-  blockTimestamp: Date;
   delegator: Address;
   delegate: Address;
   expiresAt: Date | null;
 }
 
-export interface DelegationRevokedEvent {
+export interface DelegationRevokedEvent extends IndexedEventBase {
   kind: "delegation_revoked";
-  chainId: number;
-  tokenAddress: Address;
-  txHash: Hex;
-  logIndex: number;
-  blockNumber: bigint;
-  blockTimestamp: Date;
   delegator: Address;
   delegate: Address;
 }
 
-export type IndexedEvent =
+export type TokenIndexedEvent =
   | ConfidentialTransferEvent
-  | DelegationGrantedEvent
-  | DelegationRevokedEvent;
+  | ShieldEvent
+  | UnshieldRequestedEvent
+  | UnshieldFinalizedEvent;
+
+export type IndexedEvent = TokenIndexedEvent | DelegationGrantedEvent | DelegationRevokedEvent;
 
 export interface IndexedEventBatch {
   events: IndexedEvent[];
@@ -86,6 +107,26 @@ export interface StoredTransfer {
   amount: bigint | null;
   decryptionStatus: DecryptionStatus;
   decryptionReason: DecryptionReason;
+  decryptedBy: Address | null;
+}
+
+export interface StoredActivity {
+  kind: TokenActivityKind;
+  chainId: number;
+  tokenAddress: Address;
+  txHash: Hex;
+  logIndex: number;
+  blockNumber: bigint;
+  blockTimestamp: Date;
+  from: Address | null;
+  to: Address | null;
+  receiver: Address | null;
+  encryptedAmount: Hex | null;
+  amount: bigint | null;
+  unwrapRequestId: Hex | null;
+  decryptionStatus: DecryptionStatus;
+  decryptionReason: DecryptionReason;
+  decryptedBy: Address | null;
 }
 
 export interface BalanceRecord {
@@ -104,6 +145,18 @@ export interface DecryptTransferAmountInput {
   tokenAddress: Address;
   holder: Address;
   encryptedAmount: Hex;
+}
+
+export interface BatchDecryptTransferAmountsInput {
+  chainId: number;
+  tokenAddress: Address;
+  holder: Address;
+  encryptedAmounts: Hex[];
+}
+
+export interface BatchDecryptTransferAmountResult {
+  encryptedAmount: Hex;
+  result: DecryptAmountResult;
 }
 
 export type DecryptAmountResult =

@@ -1,4 +1,4 @@
-import { ACL_TOPICS, decodeAclEvent, decodeConfidentialTransfer } from "@zama-fhe/sdk";
+import { ACL_TOPICS, TOKEN_TOPICS, decodeAclEvent, decodeOnChainEvent } from "@zama-fhe/sdk";
 import { hardhat, hoodi, mainnet, sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 import pg from "pg";
 import {
@@ -89,15 +89,48 @@ async function ensureHyperindexTable(pool: pg.Pool): Promise<void> {
       block_timestamp timestamptz not null,
       from_address text,
       to_address text,
+      receiver text,
       encrypted_amount text,
+      cleartext_amount numeric,
+      unwrap_request_id text,
       delegator text,
       delegate text,
       expires_at timestamptz,
       primary key (chain_id, tx_hash, log_index)
     )
   `);
+  await pool.query(`
+    create table if not exists source_heads (
+      source_name text not null,
+      chain_id integer not null,
+      token_address text not null,
+      head_block numeric not null,
+      updated_at timestamptz not null default now(),
+      primary key (source_name, chain_id, token_address)
+    )
+  `);
+  await pool.query("alter table hyperindex_events add column if not exists receiver text");
+  await pool.query(
+    "alter table hyperindex_events add column if not exists cleartext_amount numeric",
+  );
+  await pool.query("alter table hyperindex_events add column if not exists unwrap_request_id text");
   await pool.query(
     "create index if not exists hyperindex_events_order on hyperindex_events (block_number asc, log_index asc)",
+  );
+}
+
+async function recordSourceHead(
+  pool: pg.Pool,
+  network: NetworkConfig,
+  token: TokenConfig,
+  headBlock: bigint,
+): Promise<void> {
+  await pool.query(
+    `insert into source_heads (source_name, chain_id, token_address, head_block, updated_at)
+     values ($1, $2, $3, $4, now())
+     on conflict (source_name, chain_id, token_address)
+     do update set head_block = excluded.head_block, updated_at = excluded.updated_at`,
+    ["hyperindex", network.chainId, token.address.toLowerCase(), headBlock.toString()],
   );
 }
 
@@ -115,39 +148,101 @@ async function blockTimestamp(
   return timestamp;
 }
 
-function asDecodableLog(log: unknown): DecodableLog | null {
-  const candidate = log as Partial<DecodableLog>;
-  if (!candidate.blockNumber || candidate.logIndex === undefined || !candidate.transactionHash)
-    return null;
-  if (!candidate.topics || candidate.topics.length === 0) return null;
-  return candidate as DecodableLog;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
-async function insertTransfer(
+function asDecodableLog(log: unknown): DecodableLog | null {
+  if (!isRecord(log)) return null;
+  if (typeof log.address !== "string") return null;
+  if (!Array.isArray(log.topics) || log.topics.length === 0) return null;
+  if (typeof log.data !== "string") return null;
+  if (typeof log.transactionHash !== "string") return null;
+  if (typeof log.logIndex !== "number") return null;
+  if (typeof log.blockNumber !== "bigint") return null;
+  return {
+    address: log.address as Address,
+    topics: log.topics as [Hex, ...Hex[]],
+    data: log.data as Hex,
+    transactionHash: log.transactionHash as Hex,
+    logIndex: log.logIndex,
+    blockNumber: log.blockNumber,
+  };
+}
+
+async function insertTokenActivity(
   pool: pg.Pool,
   network: NetworkConfig,
   log: DecodableLog,
   blockTime: Date,
 ): Promise<boolean> {
-  const decoded = decodeConfidentialTransfer(log);
+  const decoded = decodeOnChainEvent(log);
   if (!decoded) return false;
+
+  const base = [
+    network.chainId,
+    log.address,
+    log.transactionHash,
+    log.logIndex,
+    log.blockNumber.toString(),
+    blockTime,
+  ];
+
+  const params = (() => {
+    if (decoded.eventName === "ConfidentialTransfer") {
+      return [
+        "confidential_transfer",
+        ...base,
+        decoded.from,
+        decoded.to,
+        null,
+        decoded.encryptedAmount,
+        null,
+        null,
+      ];
+    }
+    if (decoded.eventName === "Wrap") {
+      return [
+        "shield",
+        ...base,
+        null,
+        decoded.to,
+        null,
+        decoded.encryptedWrappedAmount,
+        decoded.roundedAmount.toString(),
+        null,
+      ];
+    }
+    if (decoded.eventName === "UnwrapRequested") {
+      return [
+        "unshield_requested",
+        ...base,
+        null,
+        null,
+        decoded.receiver,
+        decoded.encryptedAmount,
+        null,
+        decoded.unwrapRequestId ?? null,
+      ];
+    }
+    return [
+      "unshield_finalized",
+      ...base,
+      null,
+      null,
+      decoded.receiver,
+      decoded.encryptedAmount,
+      decoded.cleartextAmount.toString(),
+      decoded.unwrapRequestId ?? null,
+    ];
+  })();
+
   const result = await pool.query(
     `insert into hyperindex_events
-       (kind, chain_id, token_address, tx_hash, log_index, block_number, block_timestamp, from_address, to_address, encrypted_amount)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       (kind, chain_id, token_address, tx_hash, log_index, block_number, block_timestamp, from_address, to_address, receiver, encrypted_amount, cleartext_amount, unwrap_request_id)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      on conflict do nothing`,
-    [
-      "confidential_transfer",
-      network.chainId,
-      log.address,
-      log.transactionHash,
-      log.logIndex,
-      log.blockNumber.toString(),
-      blockTime,
-      decoded.from,
-      decoded.to,
-      decoded.encryptedAmount,
-    ],
+    params,
   );
   return result.rowCount === 1;
 }
@@ -222,15 +317,24 @@ async function scanNetwork(pool: pg.Pool, network: NetworkConfig): Promise<Index
     for (let fromBlock = fromStart; fromBlock <= latestBlock; fromBlock += blockStep) {
       const toBlock =
         fromBlock + blockStep - 1n > latestBlock ? latestBlock : fromBlock + blockStep - 1n;
-      const logs = await client.getLogs({ address: token.address, fromBlock, toBlock });
+      const logs = await client.getLogs({
+        address: token.address,
+        fromBlock,
+        toBlock,
+      });
       for (const rawLog of logs) {
         const log = asDecodableLog(rawLog);
         if (!log) continue;
+        if (!TOKEN_TOPICS.includes(log.topics[0])) continue;
         const timestamp = await blockTimestamp(client, timestamps, log.blockNumber);
-        if (await insertTransfer(pool, network, log, timestamp)) counters.transfers += 1;
+        if (await insertTokenActivity(pool, network, log, timestamp)) counters.transfers += 1;
       }
     }
   }
+
+  await Promise.all(
+    network.tokens.map((token) => recordSourceHead(pool, network, token, latestBlock)),
+  );
 
   const aclAddress = fheChainPresets.get(network.chainId)?.aclContractAddress;
   if (!aclAddress || tokenAddresses.size === 0) return counters;
@@ -245,7 +349,8 @@ async function scanNetwork(pool: pg.Pool, network: NetworkConfig): Promise<Index
     const logs = await client.getLogs({ address: aclAddress, fromBlock, toBlock });
     for (const rawLog of logs) {
       const log = asDecodableLog(rawLog);
-      if (!log || !ACL_TOPICS.includes(log.topics[0])) continue;
+      if (!log) continue;
+      if (!ACL_TOPICS.includes(log.topics[0])) continue;
       const decoded = decodeAclEvent(log);
       if (!decoded) continue;
       const tokenAddress = isTokenAddress(tokenAddresses, decoded.contractAddress);

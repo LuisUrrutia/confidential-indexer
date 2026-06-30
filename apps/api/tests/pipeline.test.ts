@@ -54,6 +54,8 @@ async function createHarness(
     balances: repos.balances,
     checkpoints: repos.checkpoints,
     attempts: repos.attempts,
+    activities: repos.activities,
+    delegations: repos.delegations,
   });
   const app = createServer({ readModel, indexer, adminApiKey: "secret" });
   return { pool, app, indexer };

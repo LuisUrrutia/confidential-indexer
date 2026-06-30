@@ -1,9 +1,22 @@
 import type { FastifyInstance } from "fastify";
-import type { BalanceQuery, TransferQuery } from "@confidential-indexer/core";
+import type { ActivityQuery, BalanceQuery, TransferQuery } from "@confidential-indexer/core";
 import { z } from "zod";
 import type { CreateServerDeps } from "./createServer.js";
 
 const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
+const decryptionStatusSchema = z.enum([
+  "pending",
+  "not_delegated",
+  "retryable_error",
+  "failed",
+  "decrypted",
+]);
+const activityKindSchema = z.enum([
+  "confidential_transfer",
+  "shield",
+  "unshield_requested",
+  "unshield_finalized",
+]);
 
 function stringifyBigInts(value: unknown): unknown {
   if (typeof value === "bigint") return value.toString();
@@ -37,9 +50,7 @@ export function registerRoutes(app: FastifyInstance, deps: CreateServerDeps): vo
       .object({
         chainId: z.coerce.number().optional(),
         tokenAddress: addressSchema.optional(),
-        decryptionStatus: z
-          .enum(["pending", "not_delegated", "retryable_error", "failed", "decrypted"])
-          .optional(),
+        decryptionStatus: decryptionStatusSchema.optional(),
         limit: z.coerce.number().int().min(1).max(100).default(50),
         offset: z.coerce.number().int().min(0).default(0),
       })
@@ -55,6 +66,33 @@ export function registerRoutes(app: FastifyInstance, deps: CreateServerDeps): vo
     if (query.decryptionStatus !== undefined)
       transferQuery.decryptionStatus = query.decryptionStatus;
     const result = await deps.readModel.getTransfers(transferQuery);
+    return reply.send(stringifyBigInts(result));
+  });
+
+  app.get("/v1/activity/:holder", async (request, reply) => {
+    const params = z.object({ holder: addressSchema }).parse(request.params);
+    const query = z
+      .object({
+        chainId: z.coerce.number().optional(),
+        tokenAddress: addressSchema.optional(),
+        kind: activityKindSchema.optional(),
+        decryptionStatus: decryptionStatusSchema.optional(),
+        limit: z.coerce.number().int().min(1).max(100).default(50),
+        offset: z.coerce.number().int().min(0).default(0),
+      })
+      .parse(request.query);
+    const activityQuery: ActivityQuery = {
+      holder: params.holder as `0x${string}`,
+      limit: query.limit,
+      offset: query.offset,
+    };
+    if (query.chainId !== undefined) activityQuery.chainId = query.chainId;
+    if (query.tokenAddress !== undefined)
+      activityQuery.tokenAddress = query.tokenAddress as `0x${string}`;
+    if (query.kind !== undefined) activityQuery.kind = query.kind;
+    if (query.decryptionStatus !== undefined)
+      activityQuery.decryptionStatus = query.decryptionStatus;
+    const result = await deps.readModel.getActivities(activityQuery);
     return reply.send(stringifyBigInts(result));
   });
 

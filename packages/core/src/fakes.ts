@@ -1,5 +1,7 @@
 import type {
   Address,
+  BatchDecryptTransferAmountResult,
+  BatchDecryptTransferAmountsInput,
   DecryptAmountResult,
   DecryptTransferAmountInput,
   EventCursor,
@@ -64,6 +66,17 @@ export class FakeDecryptionProvider implements DecryptionProvider {
     const amount = this.#amounts.get(input.encryptedAmount);
     if (amount === undefined) return { status: "not_delegated", reason: "missing_delegation" };
     return { status: "decrypted", amount };
+  }
+
+  async batchDecryptTransferAmounts(
+    input: BatchDecryptTransferAmountsInput,
+  ): Promise<BatchDecryptTransferAmountResult[]> {
+    return Promise.all(
+      input.encryptedAmounts.map(async (encryptedAmount) => ({
+        encryptedAmount,
+        result: await this.decryptTransferAmount({ ...input, encryptedAmount }),
+      })),
+    );
   }
 
   async refreshCurrentBalance(input: RefreshBalanceInput): Promise<RefreshBalanceResult> {

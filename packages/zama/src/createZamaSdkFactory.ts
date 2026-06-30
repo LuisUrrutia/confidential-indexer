@@ -1,4 +1,4 @@
-import { memoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import { MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
 import { hardhat, hoodi, mainnet, sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
@@ -18,6 +18,10 @@ export interface ZamaNetworkConfig {
 export interface CreateZamaSdkFactoryOptions {
   networks: ZamaNetworkConfig[];
   workerPoolSize?: number;
+}
+
+export interface ManagedZamaSdkFactory extends ZamaSdkFactory {
+  terminateAll(): void;
 }
 
 const fheChainPresets = new Map<number, FheChain>([
@@ -57,11 +61,11 @@ function getViemChain(network: ZamaNetworkConfig): Chain {
   });
 }
 
-export function createZamaSdkFactory(options: CreateZamaSdkFactoryOptions): ZamaSdkFactory {
+export function createZamaSdkFactory(options: CreateZamaSdkFactoryOptions): ManagedZamaSdkFactory {
   const networks = new Map(options.networks.map((network) => [network.chainId, network]));
   const sdks = new Map<number, ZamaSdkLike>();
 
-  return (chainId: number): ZamaSdkLike => {
+  const sdkForChain = ((chainId: number): ZamaSdkLike => {
     const existing = sdks.get(chainId);
     if (existing) return existing;
 
@@ -83,7 +87,7 @@ export function createZamaSdkFactory(options: CreateZamaSdkFactoryOptions): Zama
       chains: [fheChain],
       publicClient,
       walletClient,
-      storage: memoryStorage,
+      storage: new MemoryStorage(),
       relayers: {
         [fheChain.id]: relayer,
       },
@@ -91,5 +95,12 @@ export function createZamaSdkFactory(options: CreateZamaSdkFactoryOptions): Zama
     const sdk = new ZamaSDK(config) as ZamaSdkLike;
     sdks.set(chainId, sdk);
     return sdk;
+  }) as ManagedZamaSdkFactory;
+
+  sdkForChain.terminateAll = () => {
+    for (const sdk of sdks.values()) sdk.terminate?.();
+    sdks.clear();
   };
+
+  return sdkForChain;
 }

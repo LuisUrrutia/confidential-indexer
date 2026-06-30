@@ -53,9 +53,29 @@ const indexer = createConfidentialIndexer({
   balances: repos.balances,
   checkpoints: repos.checkpoints,
   attempts: repos.attempts,
+  activities: repos.activities,
+  delegations: repos.delegations,
 });
 
 runLoop(indexer, config.workerIntervalMs);
 
 const app = createServer({ readModel, indexer, adminApiKey: config.adminApiKey });
 await app.listen({ host: config.host, port: config.port });
+
+const close = async () => {
+  sdkForChain.terminateAll();
+  await app.close();
+  await appPool.end();
+  await hyperindexPool.end();
+};
+
+process.once("SIGINT", () => {
+  close()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
+});
+process.once("SIGTERM", () => {
+  close()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
+});

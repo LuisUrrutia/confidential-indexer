@@ -34,15 +34,19 @@ export class HyperindexPollingEventSource implements IndexedEventSource {
   }
 
   private mapRow(row: Record<string, unknown>): IndexedEvent {
+    const base = {
+      chainId: Number(row.chain_id),
+      tokenAddress: row.token_address as `0x${string}`,
+      txHash: row.tx_hash as `0x${string}`,
+      logIndex: Number(row.log_index),
+      blockNumber: BigInt(row.block_number as string),
+      blockTimestamp: row.block_timestamp as Date,
+    };
+
     if (row.kind === "delegation_granted") {
       return {
         kind: "delegation_granted",
-        chainId: Number(row.chain_id),
-        tokenAddress: row.token_address as `0x${string}`,
-        txHash: row.tx_hash as `0x${string}`,
-        logIndex: Number(row.log_index),
-        blockNumber: BigInt(row.block_number as string),
-        blockTimestamp: row.block_timestamp as Date,
+        ...base,
         delegator: row.delegator as `0x${string}`,
         delegate: row.delegate as `0x${string}`,
         expiresAt: (row.expires_at as Date | null) ?? null,
@@ -51,24 +55,42 @@ export class HyperindexPollingEventSource implements IndexedEventSource {
     if (row.kind === "delegation_revoked") {
       return {
         kind: "delegation_revoked",
-        chainId: Number(row.chain_id),
-        tokenAddress: row.token_address as `0x${string}`,
-        txHash: row.tx_hash as `0x${string}`,
-        logIndex: Number(row.log_index),
-        blockNumber: BigInt(row.block_number as string),
-        blockTimestamp: row.block_timestamp as Date,
+        ...base,
         delegator: row.delegator as `0x${string}`,
         delegate: row.delegate as `0x${string}`,
       };
     }
+    if (row.kind === "shield") {
+      return {
+        kind: "shield",
+        ...base,
+        to: row.to_address as `0x${string}`,
+        encryptedAmount: row.encrypted_amount as `0x${string}`,
+        amount: BigInt(row.cleartext_amount as string),
+      };
+    }
+    if (row.kind === "unshield_requested") {
+      return {
+        kind: "unshield_requested",
+        ...base,
+        receiver: row.receiver as `0x${string}`,
+        encryptedAmount: row.encrypted_amount as `0x${string}`,
+        unwrapRequestId: (row.unwrap_request_id as `0x${string}` | null) ?? null,
+      };
+    }
+    if (row.kind === "unshield_finalized") {
+      return {
+        kind: "unshield_finalized",
+        ...base,
+        receiver: row.receiver as `0x${string}`,
+        encryptedAmount: row.encrypted_amount as `0x${string}`,
+        amount: BigInt(row.cleartext_amount as string),
+        unwrapRequestId: (row.unwrap_request_id as `0x${string}` | null) ?? null,
+      };
+    }
     return {
       kind: "confidential_transfer",
-      chainId: Number(row.chain_id),
-      tokenAddress: row.token_address as `0x${string}`,
-      txHash: row.tx_hash as `0x${string}`,
-      logIndex: Number(row.log_index),
-      blockNumber: BigInt(row.block_number as string),
-      blockTimestamp: row.block_timestamp as Date,
+      ...base,
       from: row.from_address as `0x${string}`,
       to: row.to_address as `0x${string}`,
       encryptedAmount: row.encrypted_amount as `0x${string}`,

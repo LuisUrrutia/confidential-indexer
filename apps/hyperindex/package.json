@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@confidential-indexer/core": "workspace:*",
     "@zama-fhe/sdk": "alpha",
     "pg": "^8.13.1",
     "viem": "^2.21.55"
