@@ -15,11 +15,11 @@
     "@confidential-indexer/core": "workspace:*",
     "@zama-fhe/sdk": "alpha",
     "envio": "^3.2.1",
-    "pg": "^8.13.1",
-    "viem": "^2.21.55"
+    "pg": "^8.22.0",
+    "viem": "^2.54.0"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.10",
-    "typescript": "^5.7.2"
+    "@types/pg": "^8.20.0",
+    "typescript": "^6.0.3"
   }
 }

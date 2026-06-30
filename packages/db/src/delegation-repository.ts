@@ -1,3 +1,4 @@
+import { DelegationEventKind } from "@confidential-indexer/core";
 import type {
   DelegationRepository,
   IndexedEvent,
@@ -8,7 +9,9 @@ import type { PostgresPool } from "./postgres-pool.js";
 export class PostgresDelegationRepository implements DelegationRepository {
   constructor(private readonly pool: PostgresPool) {}
 
-  async upsertGrant(event: Extract<IndexedEvent, { kind: "delegation_granted" }>): Promise<void> {
+  async upsertGrant(
+    event: Extract<IndexedEvent, { kind: typeof DelegationEventKind.DelegationGranted }>,
+  ): Promise<void> {
     await this.pool.query(
       `insert into delegations (chain_id, token_address, delegator, delegate, active, expires_at, updated_at)
        values ($1,$2,$3,$4,true,$5,now())
@@ -24,7 +27,9 @@ export class PostgresDelegationRepository implements DelegationRepository {
     );
   }
 
-  async markRevoked(event: Extract<IndexedEvent, { kind: "delegation_revoked" }>): Promise<void> {
+  async markRevoked(
+    event: Extract<IndexedEvent, { kind: typeof DelegationEventKind.DelegationRevoked }>,
+  ): Promise<void> {
     await this.pool.query(
       `insert into delegations (chain_id, token_address, delegator, delegate, active, updated_at)
        values ($1,$2,$3,$4,false,now())

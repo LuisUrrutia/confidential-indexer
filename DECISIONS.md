@@ -1,8 +1,14 @@
 # Decisions
 
-## Hyperindex instead of a custom EVM indexer
+## Minimal dependency surface
 
-We evaluated writing a small log poller, using a general EVM library directly, and using Hyperindex. We chose Hyperindex because the assignment explicitly asks us to compose an off-the-shelf indexing library rather than spend time rebuilding indexing mechanics. The trade-off is accepting Hyperindex's configuration and output model, which we isolate behind `IndexedEventSource`.
+I kept the dependency graph intentionally small. A production dependency has to own a hard problem I do not want to reimplement here: chain indexing, FHE SDK integration, HTTP serving, request validation, or Postgres access. Small config, retry, mapping, and test-helper code stays local while it is still easy to read.
+
+That keeps the build light, install time short, Docker images smaller, and the review surface manageable. The trade-off is that a few boring utilities live in this repository. I accept that while the code is small and covered by focused tests; if it starts turning into framework code, that is the signal to add a real dependency.
+
+## Hyperindex for indexing
+
+We evaluated a custom `viem`/ethers log poller, Ponder, The Graph, Subsquid, and Hyperindex. Hyperindex was the right cut because it owns the indexing work we should not rebuild: event handling, generated types, cursors, and the shape of indexed output. A custom poller would push the assignment into reorgs, ABI decoding, retries, and idempotency. Ponder was the closest alternative, but it would add more application framework surface around a service that already has its own API. The trade-off is accepting Hyperindex's configuration and output model, which stays behind `IndexedEventSource`.
 
 ## Hyperindex separate from decrypted data
 
@@ -10,11 +16,11 @@ We evaluated putting decrypted fields into Hyperindex-owned storage versus keepi
 
 ## Postgres for the read model
 
-We evaluated SQLite, document storage, and Postgres. We chose Postgres because the read model needs idempotent event upserts, stable pagination, balance projections, attempt history, and operationally familiar querying. SQLite would be simpler for a local demo, but weaker as a signal for a multi-network partner indexer.
+We evaluated SQLite, MySQL/MariaDB, document storage, event-log-only storage, and Postgres. Postgres is the safest default for this read model because it gives us idempotent event upserts, transactional balance projections, stable cursor pagination, attempt history, JSON-friendly metadata, and familiar operational tooling. SQLite is fine for a local demo, but it is a weaker signal for a multi-network partner indexer. Document storage makes balance and history consistency easier to get wrong. MySQL would work, but Postgres fits the projection model better. I also kept the database layer on `pg` instead of adding an ORM or query builder because the SQL is small and explicit.
 
 ## Polling through IndexedEventSource
 
-We evaluated direct DB coupling, a queue/event bus, and cursor-based polling. We chose polling for the submission because it avoids extra infrastructure while preserving the important seam. The decryption pipeline only depends on `nextBatch(cursor)`, so a future Redis Streams, NATS, Kafka, or webhook adapter can replace polling without changing the API or decryption workflow.
+We evaluated direct DB coupling, a queue/event bus, and cursor-based polling. Polling is enough for this submission because it avoids Redis, NATS, Kafka, or another worker dependency while preserving the important seam. The decryption pipeline only depends on `nextBatch(cursor)`, so a durable queue or webhook adapter can replace polling later without changing the API or decryption workflow.
 
 ## Delegated decryption as the supported model
 
@@ -26,7 +32,7 @@ We separate current balance correctness from transfer-history completeness. Afte
 
 ## Deterministic tests instead of live-chain CI
 
-We evaluated requiring local fhEVM/Anvil in tests versus fake `IndexedEventSource` and `DecryptionProvider`. We chose fakes for automated tests because they prove our service pipeline without relying on relayer timing or delegation propagation. The live chain path belongs in the README/demo flow.
+We evaluated requiring local fhEVM/Anvil in tests versus fake `IndexedEventSource` and `DecryptionProvider`. Fakes keep automated tests small and deterministic while still proving the service pipeline. They avoid relayer timing, delegation propagation, and heavier CI setup. The live-chain path belongs in the README/demo flow.
 
 ## Dockerized dev and prod-like local flows
 
@@ -44,7 +50,7 @@ The polling and decryption worker would break first under high event volume. It 
 
 ## What was cut
 
-I cut dynamic token registration, a production queue, advanced rate limiting, and a mandatory Sepolia test. With another four hours I would first replace the polling adapter with a durable queue or add bounded-concurrency decryption with per-chain rate limits, depending on observed bottlenecks.
+I cut dynamic token registration, a production queue, an ORM/query builder, OpenAPI generation, observability vendors, advanced rate limiting, and mandatory Sepolia CI. They would make the submission heavier without proving the core confidential-indexing flow. With another four hours I would first replace the polling adapter with a durable queue or add bounded-concurrency decryption with per-chain rate limits, depending on observed bottlenecks.
 
 ## SDK feedback
 

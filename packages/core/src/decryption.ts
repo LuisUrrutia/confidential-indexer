@@ -1,19 +1,43 @@
 import type { Address, Hex } from "./addresses.js";
+import { BalanceSource, BalanceStatus } from "./balances.js";
 
-export type DecryptionStatus =
-  | "pending"
-  | "not_delegated"
-  | "retryable_error"
-  | "failed"
-  | "decrypted";
+export const DecryptionStatus = {
+  Pending: "pending",
+  NotDelegated: "not_delegated",
+  RetryableError: "retryable_error",
+  Failed: "failed",
+  Decrypted: "decrypted",
+} as const;
 
-export type DecryptionReason =
-  | "missing_delegation"
-  | "delegation_propagating"
-  | "relayer_unavailable"
-  | "sdk_error"
-  | "malformed_event"
-  | null;
+export type DecryptionStatus = (typeof DecryptionStatus)[keyof typeof DecryptionStatus];
+
+export const DECRYPTION_STATUS_VALUES = [
+  DecryptionStatus.Pending,
+  DecryptionStatus.NotDelegated,
+  DecryptionStatus.RetryableError,
+  DecryptionStatus.Failed,
+  DecryptionStatus.Decrypted,
+] as const satisfies readonly DecryptionStatus[];
+
+export const DecryptionReason = {
+  MissingDelegation: "missing_delegation",
+  DelegationPropagating: "delegation_propagating",
+  RelayerUnavailable: "relayer_unavailable",
+  SdkError: "sdk_error",
+  MalformedEvent: "malformed_event",
+  None: null,
+} as const;
+
+export type DecryptionReason = (typeof DecryptionReason)[keyof typeof DecryptionReason];
+
+export const DECRYPTION_REASON_VALUES = [
+  DecryptionReason.MissingDelegation,
+  DecryptionReason.DelegationPropagating,
+  DecryptionReason.RelayerUnavailable,
+  DecryptionReason.SdkError,
+  DecryptionReason.MalformedEvent,
+  DecryptionReason.None,
+] as const satisfies readonly DecryptionReason[];
 
 export interface DecryptTransferAmountInput {
   chainId: number;
@@ -35,11 +59,13 @@ export interface BatchDecryptTransferAmountResult {
 }
 
 export interface UndecryptedAmountResult {
-  status: Exclude<DecryptionStatus, "decrypted">;
+  status: Exclude<DecryptionStatus, typeof DecryptionStatus.Decrypted>;
   reason: Exclude<DecryptionReason, null>;
 }
 
-export type DecryptAmountResult = { status: "decrypted"; amount: bigint } | UndecryptedAmountResult;
+export type DecryptAmountResult =
+  | { status: typeof DecryptionStatus.Decrypted; amount: bigint }
+  | UndecryptedAmountResult;
 
 export interface RefreshBalanceInput {
   chainId: number;
@@ -48,8 +74,15 @@ export interface RefreshBalanceInput {
 }
 
 export type RefreshBalanceResult =
-  | { status: "known"; balance: bigint; source: "direct_decrypt" }
-  | { status: "unknown"; reason: Exclude<DecryptionReason, null> };
+  | {
+      status: typeof BalanceStatus.Known;
+      balance: bigint;
+      source: typeof BalanceSource.DirectDecrypt;
+    }
+  | {
+      status: typeof BalanceStatus.Unknown;
+      reason: Exclude<DecryptionReason, null>;
+    };
 
 export interface DecryptionReport {
   attempted: number;

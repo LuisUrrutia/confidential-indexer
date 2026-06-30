@@ -1,16 +1,14 @@
 import type { Address } from "./addresses.js";
 import type { ActivityRepository, StoredActivity } from "./activities.js";
 import type { BackfillHolderInput, BackfillReport } from "./backfill.js";
+import { BalanceStatus, HistoryCompleteness } from "./balances.js";
 import type { BalanceRepository } from "./balances.js";
 import type { CheckpointRepository } from "./checkpoints.js";
-import type {
-  DecryptAmountResult,
-  DecryptionProvider,
-  DecryptionReport,
-  DecryptionStatus,
-} from "./decryption.js";
+import { DecryptionReason, DecryptionStatus } from "./decryption.js";
+import type { DecryptAmountResult, DecryptionProvider, DecryptionReport } from "./decryption.js";
 import type { DecryptionAttemptRepository } from "./decryption-attempts.js";
 import type { DelegationRepository } from "./delegations.js";
+import { DelegationEventKind } from "./events.js";
 import type { IndexedEventSource } from "./event-source.js";
 import { holderCandidatesForActivity, holderCandidatesForTransfer } from "./holder-candidates.js";
 import type { StoredTransfer, TransferRepository } from "./transfers.js";
@@ -37,13 +35,23 @@ export interface ConfidentialIndexerDeps {
   checkpoints: CheckpointRepository;
   attempts: DecryptionAttemptRepository;
 }
+type UndecryptedAmountOutcome = Exclude<
+  DecryptAmountResult,
+  { status: typeof DecryptionStatus.Decrypted }
+>;
+
+type ProcessingStatus =
+  | typeof DecryptionStatus.Decrypted
+  | typeof DecryptionStatus.Pending
+  | typeof DecryptionStatus.Failed
+  | null;
 
 function chooseUndecryptedResult(
-  results: Exclude<DecryptAmountResult, { status: "decrypted" }>[],
-): Exclude<DecryptAmountResult, { status: "decrypted" }> | null {
+  results: UndecryptedAmountOutcome[],
+): UndecryptedAmountOutcome | null {
   return (
-    results.find((result) => result.status === "retryable_error") ??
-    results.find((result) => result.status === "failed") ??
+    results.find((result) => result.status === DecryptionStatus.RetryableError) ??
+    results.find((result) => result.status === DecryptionStatus.Failed) ??
     results[0] ??
     null
   );
@@ -72,7 +80,7 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
 
   async function recordUndecrypted(
     transfer: StoredTransfer,
-    result: Exclude<DecryptAmountResult, { status: "decrypted" }>,
+    result: UndecryptedAmountOutcome,
   ): Promise<void> {
     await deps.transfers.markTransferUndecrypted({
       chainId: transfer.chainId,
@@ -123,14 +131,15 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
       txHash: transfer.txHash,
       logIndex: transfer.logIndex,
       status: result.status,
-      reason: result.status === "decrypted" ? null : result.reason,
-      message: result.status === "decrypted" ? null : `${candidate}:${result.reason}`,
+      reason: result.status === DecryptionStatus.Decrypted ? null : result.reason,
+      message:
+        result.status === DecryptionStatus.Decrypted ? null : `${candidate}:${result.reason}`,
     });
   }
 
   async function recordActivityUndecrypted(
     activity: StoredActivity,
-    result: Exclude<DecryptAmountResult, { status: "decrypted" }>,
+    result: UndecryptedAmountOutcome,
   ): Promise<void> {
     await deps.activities.markActivityUndecrypted({
       chainId: activity.chainId,
@@ -166,8 +175,9 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
       txHash: activity.txHash,
       logIndex: activity.logIndex,
       status: result.status,
-      reason: result.status === "decrypted" ? null : result.reason,
-      message: result.status === "decrypted" ? null : `${candidate}:${result.reason}`,
+      reason: result.status === DecryptionStatus.Decrypted ? null : result.reason,
+      message:
+        result.status === DecryptionStatus.Decrypted ? null : `${candidate}:${result.reason}`,
     });
   }
 
@@ -179,19 +189,17 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
       failed: 0,
     };
     const candidateLists = await Promise.all(pending.map(candidatesForTransfer));
-    const statuses: Array<"decrypted" | "pending" | "failed" | null> = pending.map(() => null);
-    const failures = pending.map(
-      () => [] as Exclude<DecryptAmountResult, { status: "decrypted" }>[],
-    );
+    const statuses: ProcessingStatus[] = pending.map(() => null);
+    const failures = pending.map((): UndecryptedAmountOutcome[] => []);
 
     for (const [index, candidates] of candidateLists.entries()) {
       if (candidates.length > 0) continue;
-      const result: Exclude<DecryptAmountResult, { status: "decrypted" }> = {
-        status: "not_delegated",
-        reason: "missing_delegation",
+      const result: UndecryptedAmountOutcome = {
+        status: DecryptionStatus.NotDelegated,
+        reason: DecryptionReason.MissingDelegation,
       };
       await recordUndecrypted(pending[index]!, result);
-      statuses[index] = "pending";
+      statuses[index] = DecryptionStatus.Pending;
     }
 
     const maxCandidates = Math.max(0, ...candidateLists.map((candidates) => candidates.length));
@@ -241,13 +249,13 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
           const result: DecryptAmountResult = resultsByAmount.get(
             transfer.encryptedAmount.toLowerCase(),
           ) ?? {
-            status: "retryable_error",
-            reason: "sdk_error",
+            status: DecryptionStatus.RetryableError,
+            reason: DecryptionReason.SdkError,
           };
           await recordTransferAttempt(transfer, group.holder, result);
-          if (result.status === "decrypted") {
+          if (result.status === DecryptionStatus.Decrypted) {
             await markTransferDecrypted(transfer, result.amount, group.holder);
-            statuses[transferIndex] = "decrypted";
+            statuses[transferIndex] = DecryptionStatus.Decrypted;
           } else {
             failures[transferIndex]?.push(result);
           }
@@ -259,16 +267,19 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
       if (statuses[index]) continue;
       const best = chooseUndecryptedResult(failures[index] ?? []);
       if (!best) {
-        statuses[index] = "pending";
+        statuses[index] = DecryptionStatus.Pending;
         continue;
       }
       await recordUndecrypted(transfer, best);
-      statuses[index] = best.status === "failed" ? "failed" : "pending";
+      statuses[index] =
+        best.status === DecryptionStatus.Failed
+          ? DecryptionStatus.Failed
+          : DecryptionStatus.Pending;
     }
 
     for (const status of statuses) {
-      if (status === "decrypted") report.decrypted += 1;
-      else if (status === "failed") report.failed += 1;
+      if (status === DecryptionStatus.Decrypted) report.decrypted += 1;
+      else if (status === DecryptionStatus.Failed) report.failed += 1;
       else report.pending += 1;
     }
     return report;
@@ -282,8 +293,8 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
       failed: 0,
     };
     const candidateLists = await Promise.all(pending.map(candidatesForActivity));
-    const failures = pending.map((): Exclude<DecryptAmountResult, { status: "decrypted" }>[] => []);
-    const statuses: DecryptionStatus[] = pending.map(() => "pending");
+    const failures = pending.map((): UndecryptedAmountOutcome[] => []);
+    const statuses: DecryptionStatus[] = pending.map(() => DecryptionStatus.Pending);
     const maxCandidates = Math.max(0, ...candidateLists.map((candidates) => candidates.length));
 
     for (let candidateIndex = 0; candidateIndex < maxCandidates; candidateIndex += 1) {
@@ -298,7 +309,7 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
       >();
 
       for (const [index, activity] of pending.entries()) {
-        if (statuses[index] === "decrypted" || !activity.encryptedAmount) continue;
+        if (statuses[index] === DecryptionStatus.Decrypted || !activity.encryptedAmount) continue;
         const holder = candidateLists[index]?.[candidateIndex];
         if (!holder) continue;
         const key = `${activity.chainId}:${activity.tokenAddress.toLowerCase()}:${holder.toLowerCase()}`;
@@ -333,17 +344,17 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
         const resultsByAmount = new Map(results.map((item) => [item.encryptedAmount, item.result]));
 
         for (const index of group.activityIndexes) {
-          if (statuses[index] === "decrypted") continue;
+          if (statuses[index] === DecryptionStatus.Decrypted) continue;
           const activity = pending[index];
           if (!activity?.encryptedAmount) continue;
           const result = resultsByAmount.get(activity.encryptedAmount) ?? {
-            status: "retryable_error",
-            reason: "sdk_error",
+            status: DecryptionStatus.RetryableError,
+            reason: DecryptionReason.SdkError,
           };
           await recordActivityAttempt(activity, group.holder, result);
-          if (result.status === "decrypted") {
+          if (result.status === DecryptionStatus.Decrypted) {
             await markActivityDecrypted(activity, result.amount, group.holder);
-            statuses[index] = "decrypted";
+            statuses[index] = DecryptionStatus.Decrypted;
           } else {
             failures[index]?.push(result);
           }
@@ -352,19 +363,22 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
     }
 
     for (const [index, activity] of pending.entries()) {
-      if (statuses[index] === "decrypted") continue;
+      if (statuses[index] === DecryptionStatus.Decrypted) continue;
       const best = chooseUndecryptedResult(failures[index] ?? []);
       if (!best) {
-        statuses[index] = "pending";
+        statuses[index] = DecryptionStatus.Pending;
         continue;
       }
       await recordActivityUndecrypted(activity, best);
-      statuses[index] = best.status === "failed" ? "failed" : "pending";
+      statuses[index] =
+        best.status === DecryptionStatus.Failed
+          ? DecryptionStatus.Failed
+          : DecryptionStatus.Pending;
     }
 
     for (const status of statuses) {
-      if (status === "decrypted") report.decrypted += 1;
-      else if (status === "failed") report.failed += 1;
+      if (status === DecryptionStatus.Decrypted) report.decrypted += 1;
+      else if (status === DecryptionStatus.Failed) report.failed += 1;
       else report.pending += 1;
     }
     return report;
@@ -384,11 +398,11 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
       const cursor = await deps.checkpoints.getCursor(deps.sourceName);
       const batch = await deps.eventSource.nextBatch(cursor);
       for (const event of batch.events) {
-        if (event.kind === "delegation_granted") {
+        if (event.kind === DelegationEventKind.DelegationGranted) {
           await deps.delegations.upsertGrant(event);
           continue;
         }
-        if (event.kind === "delegation_revoked") {
+        if (event.kind === DelegationEventKind.DelegationRevoked) {
           await deps.delegations.markRevoked(event);
           continue;
         }
@@ -425,15 +439,15 @@ export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): Confid
         ),
       );
       const balance = await deps.decryption.refreshCurrentBalance(input);
-      if (balance.status === "known") {
+      if (balance.status === BalanceStatus.Known) {
         await deps.balances.saveDirectBalance({
           chainId: input.chainId,
           tokenAddress: input.tokenAddress,
           holder: input.holder,
           balance: balance.balance,
-          balanceStatus: "known",
+          balanceStatus: BalanceStatus.Known,
           balanceSource: balance.source,
-          historyCompleteness: "partial",
+          historyCompleteness: HistoryCompleteness.Partial,
           updatedAt: new Date(),
         });
         return { holder: input.holder, transferReport: decryptionReport, balanceRefreshed: true };

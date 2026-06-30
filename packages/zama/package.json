@@ -11,10 +11,10 @@
   "dependencies": {
     "@confidential-indexer/core": "workspace:*",
     "@zama-fhe/sdk": "alpha",
-    "ethers": "^6.13.4",
-    "viem": "^2.21.55"
+    "ethers": "^6.17.0",
+    "viem": "^2.54.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
+    "typescript": "^6.0.3"
   }
 }

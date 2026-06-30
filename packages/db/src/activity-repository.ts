@@ -1,3 +1,9 @@
+import {
+  DecryptionReason,
+  DecryptionStatus,
+  DelegationEventKind,
+  TokenActivityKind,
+} from "@confidential-indexer/core";
 import type {
   ActivityPage,
   ActivityQuery,
@@ -45,8 +51,12 @@ export class PostgresActivityRepository implements ActivityRepository {
   constructor(private readonly pool: PostgresPool) {}
 
   async upsertIndexedEvent(event: IndexedEvent): Promise<void> {
-    if (event.kind === "delegation_granted" || event.kind === "delegation_revoked") return;
-    if (event.kind === "confidential_transfer") {
+    if (
+      event.kind === DelegationEventKind.DelegationGranted ||
+      event.kind === DelegationEventKind.DelegationRevoked
+    )
+      return;
+    if (event.kind === TokenActivityKind.ConfidentialTransfer) {
       await this.insertActivity({
         kind: event.kind,
         chainId: event.chainId,
@@ -61,13 +71,13 @@ export class PostgresActivityRepository implements ActivityRepository {
         encryptedAmount: event.encryptedAmount,
         amount: null,
         unwrapRequestId: null,
-        decryptionStatus: "pending",
-        decryptionReason: "missing_delegation",
+        decryptionStatus: DecryptionStatus.Pending,
+        decryptionReason: DecryptionReason.MissingDelegation,
         decryptedBy: null,
       });
       return;
     }
-    if (event.kind === "shield") {
+    if (event.kind === TokenActivityKind.Shield) {
       await this.insertActivity({
         kind: event.kind,
         chainId: event.chainId,
@@ -82,13 +92,13 @@ export class PostgresActivityRepository implements ActivityRepository {
         encryptedAmount: event.encryptedAmount,
         amount: event.amount,
         unwrapRequestId: null,
-        decryptionStatus: "decrypted",
+        decryptionStatus: DecryptionStatus.Decrypted,
         decryptionReason: null,
         decryptedBy: null,
       });
       return;
     }
-    if (event.kind === "unshield_requested") {
+    if (event.kind === TokenActivityKind.UnshieldRequested) {
       await this.insertActivity({
         kind: event.kind,
         chainId: event.chainId,
@@ -103,8 +113,8 @@ export class PostgresActivityRepository implements ActivityRepository {
         encryptedAmount: event.encryptedAmount,
         amount: null,
         unwrapRequestId: event.unwrapRequestId,
-        decryptionStatus: "pending",
-        decryptionReason: "missing_delegation",
+        decryptionStatus: DecryptionStatus.Pending,
+        decryptionReason: DecryptionReason.MissingDelegation,
         decryptedBy: null,
       });
       return;
@@ -123,7 +133,7 @@ export class PostgresActivityRepository implements ActivityRepository {
       encryptedAmount: event.encryptedAmount,
       amount: event.amount,
       unwrapRequestId: event.unwrapRequestId,
-      decryptionStatus: "decrypted",
+      decryptionStatus: DecryptionStatus.Decrypted,
       decryptionReason: null,
       decryptedBy: null,
     });
@@ -137,9 +147,16 @@ export class PostgresActivityRepository implements ActivityRepository {
     decryptedBy: StoredActivity["to"];
   }): Promise<void> {
     await this.pool.query(
-      `update activities set amount = $4, decryption_status = 'decrypted', decryption_reason = null, decrypted_by = lower($5), updated_at = now()
+      `update activities set amount = $4, decryption_status = $5, decryption_reason = null, decrypted_by = lower($6), updated_at = now()
        where chain_id = $1 and tx_hash = $2 and log_index = $3`,
-      [input.chainId, input.txHash, input.logIndex, input.amount.toString(), input.decryptedBy],
+      [
+        input.chainId,
+        input.txHash,
+        input.logIndex,
+        input.amount.toString(),
+        DecryptionStatus.Decrypted,
+        input.decryptedBy,
+      ],
     );
   }
 
@@ -161,11 +178,15 @@ export class PostgresActivityRepository implements ActivityRepository {
     const result = await this.pool.query(
       `select * from activities
        where encrypted_amount is not null
-       and kind <> 'confidential_transfer'
-       and decryption_status in ('pending','not_delegated','retryable_error')
+       and kind <> $2
+       and decryption_status = any($3)
        order by block_number asc, log_index asc
        limit $1`,
-      [limit],
+      [
+        limit,
+        TokenActivityKind.ConfidentialTransfer,
+        [DecryptionStatus.Pending, DecryptionStatus.NotDelegated, DecryptionStatus.RetryableError],
+      ],
     );
     return result.rows.map(mapActivity);
   }
@@ -182,11 +203,18 @@ export class PostgresActivityRepository implements ActivityRepository {
        and token_address = lower($2)
        and (from_address = lower($3) or to_address = lower($3) or receiver = lower($3))
        and encrypted_amount is not null
-       and kind <> 'confidential_transfer'
-       and decryption_status in ('pending','not_delegated','retryable_error')
+       and kind <> $5
+       and decryption_status = any($6)
        order by block_number asc, log_index asc
        limit $4`,
-      [input.chainId, input.tokenAddress, input.holder, input.limit],
+      [
+        input.chainId,
+        input.tokenAddress,
+        input.holder,
+        input.limit,
+        TokenActivityKind.ConfidentialTransfer,
+        [DecryptionStatus.Pending, DecryptionStatus.NotDelegated, DecryptionStatus.RetryableError],
+      ],
     );
     return result.rows.map(mapActivity);
   }

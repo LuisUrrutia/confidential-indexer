@@ -1,3 +1,4 @@
+import { DelegationEventKind, TokenActivityKind } from "@confidential-indexer/core";
 import type {
   EventCursor,
   IndexedEvent,
@@ -43,44 +44,44 @@ export class HyperindexPollingEventSource implements IndexedEventSource {
       blockTimestamp: row.block_timestamp as Date,
     };
 
-    if (row.kind === "delegation_granted") {
+    if (row.kind === DelegationEventKind.DelegationGranted) {
       return {
-        kind: "delegation_granted",
+        kind: DelegationEventKind.DelegationGranted,
         ...base,
         delegator: row.delegator as `0x${string}`,
         delegate: row.delegate as `0x${string}`,
         expiresAt: (row.expires_at as Date | null) ?? null,
       };
     }
-    if (row.kind === "delegation_revoked") {
+    if (row.kind === DelegationEventKind.DelegationRevoked) {
       return {
-        kind: "delegation_revoked",
+        kind: DelegationEventKind.DelegationRevoked,
         ...base,
         delegator: row.delegator as `0x${string}`,
         delegate: row.delegate as `0x${string}`,
       };
     }
-    if (row.kind === "shield") {
+    if (row.kind === TokenActivityKind.Shield) {
       return {
-        kind: "shield",
+        kind: TokenActivityKind.Shield,
         ...base,
         to: row.to_address as `0x${string}`,
         encryptedAmount: row.encrypted_amount as `0x${string}`,
         amount: BigInt(row.cleartext_amount as string),
       };
     }
-    if (row.kind === "unshield_requested") {
+    if (row.kind === TokenActivityKind.UnshieldRequested) {
       return {
-        kind: "unshield_requested",
+        kind: TokenActivityKind.UnshieldRequested,
         ...base,
         receiver: row.receiver as `0x${string}`,
         encryptedAmount: row.encrypted_amount as `0x${string}`,
         unwrapRequestId: (row.unwrap_request_id as `0x${string}` | null) ?? null,
       };
     }
-    if (row.kind === "unshield_finalized") {
+    if (row.kind === TokenActivityKind.UnshieldFinalized) {
       return {
-        kind: "unshield_finalized",
+        kind: TokenActivityKind.UnshieldFinalized,
         ...base,
         receiver: row.receiver as `0x${string}`,
         encryptedAmount: row.encrypted_amount as `0x${string}`,
@@ -89,7 +90,7 @@ export class HyperindexPollingEventSource implements IndexedEventSource {
       };
     }
     return {
-      kind: "confidential_transfer",
+      kind: TokenActivityKind.ConfidentialTransfer,
       ...base,
       from: row.from_address as `0x${string}`,
       to: row.to_address as `0x${string}`,

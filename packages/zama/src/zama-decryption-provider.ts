@@ -1,4 +1,10 @@
 import { ZamaErrorCode, matchZamaError } from "@zama-fhe/sdk";
+import {
+  BalanceSource,
+  BalanceStatus,
+  DecryptionReason,
+  DecryptionStatus,
+} from "@confidential-indexer/core";
 import type {
   BatchDecryptTransferAmountResult,
   BatchDecryptTransferAmountsInput,
@@ -40,40 +46,39 @@ export type ZamaSdkFactory = (chainId: number) => ZamaSdkLike;
 
 export function mapZamaError(
   error: unknown,
-): Exclude<DecryptAmountResult, { status: "decrypted" }> {
-  const typed = matchZamaError<Exclude<DecryptAmountResult, { status: "decrypted" }> | undefined>(
-    error,
-    {
-      [ZamaErrorCode.DelegationNotFound]: () => ({
-        status: "not_delegated",
-        reason: "missing_delegation",
-      }),
-      [ZamaErrorCode.DelegationExpired]: () => ({
-        status: "not_delegated",
-        reason: "missing_delegation",
-      }),
-      [ZamaErrorCode.NoCiphertext]: () => ({
-        status: "not_delegated",
-        reason: "missing_delegation",
-      }),
-      [ZamaErrorCode.DelegationNotPropagated]: () => ({
-        status: "retryable_error",
-        reason: "delegation_propagating",
-      }),
-      [ZamaErrorCode.RelayerRequestFailed]: (relayerError) => ({
-        status: "retryable_error",
-        reason:
-          relayerError.statusCode === undefined || relayerError.statusCode >= 500
-            ? "relayer_unavailable"
-            : "sdk_error",
-      }),
-      [ZamaErrorCode.DecryptionFailed]: () => ({
-        status: "retryable_error",
-        reason: "sdk_error",
-      }),
-      _: () => undefined,
-    },
-  );
+): Exclude<DecryptAmountResult, { status: typeof DecryptionStatus.Decrypted }> {
+  const typed = matchZamaError<
+    Exclude<DecryptAmountResult, { status: typeof DecryptionStatus.Decrypted }> | undefined
+  >(error, {
+    [ZamaErrorCode.DelegationNotFound]: () => ({
+      status: DecryptionStatus.NotDelegated,
+      reason: DecryptionReason.MissingDelegation,
+    }),
+    [ZamaErrorCode.DelegationExpired]: () => ({
+      status: DecryptionStatus.NotDelegated,
+      reason: DecryptionReason.MissingDelegation,
+    }),
+    [ZamaErrorCode.NoCiphertext]: () => ({
+      status: DecryptionStatus.NotDelegated,
+      reason: DecryptionReason.MissingDelegation,
+    }),
+    [ZamaErrorCode.DelegationNotPropagated]: () => ({
+      status: DecryptionStatus.RetryableError,
+      reason: DecryptionReason.DelegationPropagating,
+    }),
+    [ZamaErrorCode.RelayerRequestFailed]: (relayerError) => ({
+      status: DecryptionStatus.RetryableError,
+      reason:
+        relayerError.statusCode === undefined || relayerError.statusCode >= 500
+          ? DecryptionReason.RelayerUnavailable
+          : DecryptionReason.SdkError,
+    }),
+    [ZamaErrorCode.DecryptionFailed]: () => ({
+      status: DecryptionStatus.RetryableError,
+      reason: DecryptionReason.SdkError,
+    }),
+    _: () => undefined,
+  });
   if (typed) return typed;
 
   const message = error instanceof Error ? error.message : String(error);
@@ -83,22 +88,25 @@ export function mapZamaError(
     normalized.includes("no active delegation") ||
     normalized.includes("expired")
   ) {
-    return { status: "not_delegated", reason: "missing_delegation" };
+    return { status: DecryptionStatus.NotDelegated, reason: DecryptionReason.MissingDelegation };
   }
   if (
     normalized.includes("propagat") ||
     normalized.includes("sync") ||
     normalized.includes("acl state")
   ) {
-    return { status: "retryable_error", reason: "delegation_propagating" };
+    return {
+      status: DecryptionStatus.RetryableError,
+      reason: DecryptionReason.DelegationPropagating,
+    };
   }
   if (
     normalized.includes("gateway") ||
     (normalized.includes("relayer") && normalized.includes("unavailable"))
   ) {
-    return { status: "retryable_error", reason: "relayer_unavailable" };
+    return { status: DecryptionStatus.RetryableError, reason: DecryptionReason.RelayerUnavailable };
   }
-  return { status: "retryable_error", reason: "sdk_error" };
+  return { status: DecryptionStatus.RetryableError, reason: DecryptionReason.SdkError };
 }
 
 export class ZamaDecryptionProvider implements DecryptionProvider {
@@ -112,8 +120,9 @@ export class ZamaDecryptionProvider implements DecryptionProvider {
         input.holder,
       );
       const clear = values[input.encryptedAmount];
-      if (clear === undefined) return { status: "retryable_error", reason: "sdk_error" };
-      return { status: "decrypted", amount: BigInt(clear) };
+      if (clear === undefined)
+        return { status: DecryptionStatus.RetryableError, reason: DecryptionReason.SdkError };
+      return { status: DecryptionStatus.Decrypted, amount: BigInt(clear) };
     } catch (error) {
       return mapZamaError(error);
     }
@@ -144,15 +153,24 @@ export class ZamaDecryptionProvider implements DecryptionProvider {
       return input.encryptedAmounts.map((encryptedAmount) => {
         const item = byEncryptedValue.get(encryptedAmount);
         if (!item) {
-          return { encryptedAmount, result: { status: "retryable_error", reason: "sdk_error" } };
+          return {
+            encryptedAmount,
+            result: { status: DecryptionStatus.RetryableError, reason: DecryptionReason.SdkError },
+          };
         }
         if (item.error) {
           return { encryptedAmount, result: mapZamaError(item.error) };
         }
         if (item.value === undefined) {
-          return { encryptedAmount, result: { status: "retryable_error", reason: "sdk_error" } };
+          return {
+            encryptedAmount,
+            result: { status: DecryptionStatus.RetryableError, reason: DecryptionReason.SdkError },
+          };
         }
-        return { encryptedAmount, result: { status: "decrypted", amount: BigInt(item.value) } };
+        return {
+          encryptedAmount,
+          result: { status: DecryptionStatus.Decrypted, amount: BigInt(item.value) },
+        };
       });
     } catch (error) {
       const result = mapZamaError(error);
@@ -164,10 +182,10 @@ export class ZamaDecryptionProvider implements DecryptionProvider {
       const sdk = this.sdkForChain(input.chainId);
       const token = sdk.createToken(input.tokenAddress);
       const balance = await token.decryptBalanceAs({ delegatorAddress: input.holder });
-      return { status: "known", balance, source: "direct_decrypt" };
+      return { status: BalanceStatus.Known, balance, source: BalanceSource.DirectDecrypt };
     } catch (error) {
       const mapped = mapZamaError(error);
-      return { status: "unknown", reason: mapped.reason };
+      return { status: BalanceStatus.Unknown, reason: mapped.reason };
     }
   }
 }

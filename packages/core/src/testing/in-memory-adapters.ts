@@ -1,4 +1,5 @@
 import type { Address, Hex } from "../addresses.js";
+import { BalanceSource, BalanceStatus } from "../balances.js";
 import type {
   BatchDecryptTransferAmountResult,
   BatchDecryptTransferAmountsInput,
@@ -8,6 +9,7 @@ import type {
   RefreshBalanceResult,
   UndecryptedAmountResult,
 } from "../decryption.js";
+import { DecryptionReason, DecryptionStatus } from "../decryption.js";
 import type { EventCursor, IndexedEvent, IndexedEventBatch } from "../events.js";
 import type { DecryptionProvider } from "../decryption.js";
 import type { IndexedEventSource } from "../event-source.js";
@@ -63,8 +65,9 @@ export class InMemoryDecryptionProvider implements DecryptionProvider {
   async decryptTransferAmount(input: DecryptTransferAmountInput): Promise<DecryptAmountResult> {
     if (this.#failure) return this.#failure;
     const amount = this.#amounts.get(input.encryptedAmount);
-    if (amount === undefined) return { status: "not_delegated", reason: "missing_delegation" };
-    return { status: "decrypted", amount };
+    if (amount === undefined)
+      return { status: DecryptionStatus.NotDelegated, reason: DecryptionReason.MissingDelegation };
+    return { status: DecryptionStatus.Decrypted, amount };
   }
 
   async batchDecryptTransferAmounts(
@@ -82,8 +85,9 @@ export class InMemoryDecryptionProvider implements DecryptionProvider {
     const balance = this.#balances.get(
       this.#balanceKey(input.chainId, input.tokenAddress, input.holder),
     );
-    if (balance === undefined) return { status: "unknown", reason: "missing_delegation" };
-    return { status: "known", balance, source: "direct_decrypt" };
+    if (balance === undefined)
+      return { status: BalanceStatus.Unknown, reason: DecryptionReason.MissingDelegation };
+    return { status: BalanceStatus.Known, balance, source: BalanceSource.DirectDecrypt };
   }
 
   #balanceKey(chainId: number, tokenAddress: Address, holder: Address): string {

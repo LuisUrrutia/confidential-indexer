@@ -1,3 +1,4 @@
+import { DECRYPTION_STATUS_VALUES, TOKEN_ACTIVITY_KIND_VALUES } from "@confidential-indexer/core";
 import type {
   ActivityQuery,
   Address,
@@ -13,19 +14,8 @@ const addressSchema = z
   .string()
   .regex(/^0x[a-fA-F0-9]{40}$/)
   .transform((value) => value as Address);
-const decryptionStatusSchema: z.ZodType<DecryptionStatus> = z.enum([
-  "pending",
-  "not_delegated",
-  "retryable_error",
-  "failed",
-  "decrypted",
-]);
-const activityKindSchema: z.ZodType<TokenActivityKind> = z.enum([
-  "confidential_transfer",
-  "shield",
-  "unshield_requested",
-  "unshield_finalized",
-]);
+const decryptionStatusSchema: z.ZodType<DecryptionStatus> = z.enum(DECRYPTION_STATUS_VALUES);
+const activityKindSchema: z.ZodType<TokenActivityKind> = z.enum(TOKEN_ACTIVITY_KIND_VALUES);
 
 const holderParamsSchema = z.object({ holder: addressSchema });
 const filteredQuerySchema = z.object({

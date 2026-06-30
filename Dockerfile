@@ -1,6 +1,6 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.25.0
 
-FROM node:22-alpine AS base
+FROM node:24.18.0-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
@@ -21,7 +21,7 @@ COPY . .
 RUN pnpm build
 RUN pnpm deploy --filter @confidential-indexer/api --prod /prod/api
 
-FROM node:22-alpine AS api
+FROM node:24.18.0-alpine AS api
 ENV NODE_ENV=production
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH

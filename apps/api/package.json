@@ -14,10 +14,10 @@
     "@confidential-indexer/db": "workspace:*",
     "@confidential-indexer/hyperindex-adapter": "workspace:*",
     "@confidential-indexer/zama": "workspace:*",
-    "fastify": "^5.1.0",
-    "zod": "^3.24.1"
+    "fastify": "^5.9.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
+    "typescript": "^6.0.3"
   }
 }
