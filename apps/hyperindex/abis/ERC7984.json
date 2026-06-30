@@ -1,0 +1,48 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "from", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "to", "type": "address" },
+      { "indexed": true, "internalType": "bytes32", "name": "amount", "type": "bytes32" }
+    ],
+    "name": "ConfidentialTransfer",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "to", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "roundedAmount", "type": "uint256" },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "encryptedWrappedAmount",
+        "type": "bytes32"
+      }
+    ],
+    "name": "Wrap",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "receiver", "type": "address" },
+      { "indexed": false, "internalType": "bytes32", "name": "encryptedAmount", "type": "bytes32" },
+      { "indexed": false, "internalType": "bytes32", "name": "unwrapRequestId", "type": "bytes32" }
+    ],
+    "name": "UnwrapRequested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "receiver", "type": "address" },
+      { "indexed": true, "internalType": "bytes32", "name": "unwrapRequestId", "type": "bytes32" },
+      { "indexed": false, "internalType": "bytes32", "name": "encryptedAmount", "type": "bytes32" },
+      { "indexed": false, "internalType": "uint64", "name": "cleartextAmount", "type": "uint64" }
+    ],
+    "name": "UnwrapFinalized",
+    "type": "event"
+  }
+]

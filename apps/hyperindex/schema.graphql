@@ -1,0 +1,19 @@
+type HyperindexEvent {
+  id: ID!
+  kind: String!
+  chainId: Int!
+  tokenAddress: Bytes!
+  txHash: Bytes!
+  logIndex: Int!
+  blockNumber: BigInt!
+  blockTimestamp: Timestamp!
+  fromAddress: Bytes
+  toAddress: Bytes
+  receiver: Bytes
+  encryptedAmount: Bytes
+  cleartextAmount: BigInt
+  unwrapRequestId: Bytes
+  delegator: Bytes
+  delegate: Bytes
+  expiresAt: Timestamp
+}

@@ -1,0 +1,27 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "delegator", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "delegate", "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "contractAddress", "type": "address" },
+      { "indexed": false, "internalType": "uint64", "name": "delegationCounter", "type": "uint64" },
+      { "indexed": false, "internalType": "uint64", "name": "oldExpirationDate", "type": "uint64" },
+      { "indexed": false, "internalType": "uint64", "name": "newExpirationDate", "type": "uint64" }
+    ],
+    "name": "DelegatedForUserDecryption",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "delegator", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "delegate", "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "contractAddress", "type": "address" },
+      { "indexed": false, "internalType": "uint64", "name": "delegationCounter", "type": "uint64" },
+      { "indexed": false, "internalType": "uint64", "name": "oldExpirationDate", "type": "uint64" }
+    ],
+    "name": "RevokedDelegationForUserDecryption",
+    "type": "event"
+  }
+]

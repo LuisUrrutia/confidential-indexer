@@ -1,6 +1,13 @@
 # Hyperindex app
 
-This app owns raw chain indexing. The submission keeps Hyperindex separate from decrypted data. Hyperindex should write normalized rows into a `hyperindex_events` shape consumed by `HyperindexPollingEventSource`:
+This app owns raw chain indexing. The production path is an Envio HyperIndex project:
+
+- `config.yaml` declares the ERC-7984 token contract and ACL contract.
+- `schema.graphql` defines the normalized `HyperindexEvent` table.
+- `src/handlers/erc7984.ts` registers Envio handlers that write rows through `envioHandlers.ts`.
+
+The Decryption/API Service consumes rows from `hyperindex_events` through `HyperindexPollingEventSource`.
+The normalized shape includes:
 
 - `kind`
 - `chain_id`
@@ -9,7 +16,7 @@ This app owns raw chain indexing. The submission keeps Hyperindex separate from 
 - `log_index`
 - `block_number`
 - `block_timestamp`
-- transfer fields: `from_address`, `to_address`, `encrypted_amount`
+- transfer fields: `from_address`, `to_address`, `receiver`, `encrypted_amount`, `cleartext_amount`, `unwrap_request_id`
 - delegation fields: `delegator`, `delegate`, `expires_at`
 
-The Zama SDK exports event topic constants and decoders for ERC-7984 token and ACL events. The production Hyperindex config should use those constants to select logs and normalize them into this shape.
+`pnpm --filter @confidential-indexer/hyperindex scan:demo` keeps the original local viem scanner available as a demo/manual diagnostic fallback. It is not the primary production indexing path.

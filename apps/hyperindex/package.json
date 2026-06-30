@@ -5,11 +5,17 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "codegen": "envio codegen",
+    "dev": "envio dev",
+    "scan:demo": "tsx src/scanOnce.ts",
+    "start": "envio start",
+    "stop": "envio stop",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@confidential-indexer/core": "workspace:*",
     "@zama-fhe/sdk": "alpha",
+    "envio": "^3.2.1",
     "pg": "^8.13.1",
     "viem": "^2.21.55"
   },
