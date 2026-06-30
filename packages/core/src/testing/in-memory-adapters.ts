@@ -1,18 +1,16 @@
+import type { Address, Hex } from "../addresses.js";
 import type {
-  Address,
   BatchDecryptTransferAmountResult,
   BatchDecryptTransferAmountsInput,
   DecryptAmountResult,
   DecryptTransferAmountInput,
-  EventCursor,
-  Hex,
-  IndexedEvent,
-  IndexedEventBatch,
   RefreshBalanceInput,
   RefreshBalanceResult,
   UndecryptedAmountResult,
-} from "../domain.js";
-import type { DecryptionProvider, IndexedEventSource } from "../interfaces.js";
+} from "../decryption.js";
+import type { EventCursor, IndexedEvent, IndexedEventBatch } from "../events.js";
+import type { DecryptionProvider } from "../decryption.js";
+import type { IndexedEventSource } from "../event-source.js";
 
 export class InMemoryIndexedEventSource implements IndexedEventSource {
   readonly #events: IndexedEvent[];

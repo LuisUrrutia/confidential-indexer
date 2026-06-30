@@ -1,19 +1,41 @@
+import type { Address } from "./addresses.js";
+import type { ActivityRepository, StoredActivity } from "./activities.js";
+import type { BackfillHolderInput, BackfillReport } from "./backfill.js";
+import type { BalanceRepository } from "./balances.js";
+import type { CheckpointRepository } from "./checkpoints.js";
 import type {
-  Address,
-  BackfillHolderInput,
-  BackfillReport,
   DecryptAmountResult,
-  DecryptionStatus,
+  DecryptionProvider,
   DecryptionReport,
-  IngestionReport,
-  StoredActivity,
-  StoredTransfer,
-} from "./domain.js";
-import { ZERO_ADDRESS } from "./constants.js";
-import type { ConfidentialIndexer, ConfidentialIndexerDeps } from "./interfaces.js";
+  DecryptionStatus,
+} from "./decryption.js";
+import type { DecryptionAttemptRepository } from "./decryption-attempts.js";
+import type { DelegationRepository } from "./delegations.js";
+import type { IndexedEventSource } from "./event-source.js";
+import { holderCandidatesForActivity, holderCandidatesForTransfer } from "./holder-candidates.js";
+import type { StoredTransfer, TransferRepository } from "./transfers.js";
 
-function isUsableCandidate(address: Address): boolean {
-  return address.toLowerCase() !== ZERO_ADDRESS;
+export interface IngestionReport {
+  ingested: number;
+  nextCursor: { blockNumber: bigint; logIndex: number } | null;
+}
+
+export interface ConfidentialIndexer {
+  ingestNextBatch(): Promise<IngestionReport>;
+  processPendingDecryptions(limit?: number): Promise<DecryptionReport>;
+  backfillHolder(input: BackfillHolderInput): Promise<BackfillReport>;
+}
+
+export interface ConfidentialIndexerDeps {
+  sourceName: string;
+  eventSource: IndexedEventSource;
+  decryption: DecryptionProvider;
+  transfers: TransferRepository;
+  activities: ActivityRepository;
+  delegations: DelegationRepository;
+  balances: BalanceRepository;
+  checkpoints: CheckpointRepository;
+  attempts: DecryptionAttemptRepository;
 }
 
 function chooseUndecryptedResult(
@@ -29,41 +51,23 @@ function chooseUndecryptedResult(
 
 export function createConfidentialIndexer(deps: ConfidentialIndexerDeps): ConfidentialIndexer {
   async function candidatesForTransfer(transfer: StoredTransfer): Promise<Address[]> {
-    const ordered = [
-      transfer.to,
-      transfer.from,
-      ...(await deps.delegations.listActiveDelegators({
+    return holderCandidatesForTransfer(
+      transfer,
+      await deps.delegations.listActiveDelegators({
         chainId: transfer.chainId,
         tokenAddress: transfer.tokenAddress,
-      })),
-    ];
-    const seen = new Set<string>();
-    return ordered.filter((candidate) => {
-      const key = candidate.toLowerCase();
-      if (!isUsableCandidate(candidate) || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+      }),
+    );
   }
 
   async function candidatesForActivity(activity: StoredActivity): Promise<Address[]> {
-    const ordered = [
-      activity.receiver,
-      activity.to,
-      activity.from,
-      ...(await deps.delegations.listActiveDelegators({
+    return holderCandidatesForActivity(
+      activity,
+      await deps.delegations.listActiveDelegators({
         chainId: activity.chainId,
         tokenAddress: activity.tokenAddress,
-      })),
-    ];
-    const seen = new Set<string>();
-    return ordered.filter((candidate): candidate is Address => {
-      if (!candidate) return false;
-      const key = candidate.toLowerCase();
-      if (!isUsableCandidate(candidate) || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+      }),
+    );
   }
 
   async function recordUndecrypted(
