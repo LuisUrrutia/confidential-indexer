@@ -11,11 +11,11 @@ import {
   type ZamaNetworkConfig,
   ZamaDecryptionProvider,
 } from "@confidential-indexer/zama";
-import { loadConfig } from "./app-config.js";
+import { loadAppConfig } from "./app-config.js";
 import { createPartnerApiServer } from "./http/http-server.js";
 import { runIndexerWorkerLoop } from "./workers/indexer-worker-loop.js";
 
-const config = loadConfig();
+const config = loadAppConfig();
 const appPool = createPostgresPool(config.databaseUrl);
 const hyperindexPool = createPostgresPool(config.hyperindexDatabaseUrl);
 await runSchemaMigrations(appPool);

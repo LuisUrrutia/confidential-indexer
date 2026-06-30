@@ -60,7 +60,7 @@ function parseNetworks(env: NodeJS.ProcessEnv): AppConfig["networks"] {
   });
 }
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return appConfigSchema.parse({
     databaseUrl: env.DATABASE_URL,
     hyperindexDatabaseUrl: env.HYPERINDEX_DATABASE_URL ?? env.DATABASE_URL,

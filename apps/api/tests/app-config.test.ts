@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { loadConfig } from "../src/app-config.js";
+import { loadAppConfig } from "../src/app-config.js";
 
 const privateKey = `0x${"1".repeat(64)}`;
 
 describe("API config", () => {
   it("omits optional relayer auth when the env value is empty", () => {
-    const config = loadConfig({
+    const config = loadAppConfig({
       DATABASE_URL: "postgres://indexer:indexer@localhost:5432/confidential_indexer",
       ADMIN_API_KEY: "secret",
       API_PORT: "3001",
