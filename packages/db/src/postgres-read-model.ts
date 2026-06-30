@@ -9,7 +9,7 @@ import type {
   TransferPage,
 } from "@confidential-indexer/core";
 import type { Pool } from "./connection.js";
-import { PostgresRepositories } from "./PostgresRepositories.js";
+import { PostgresRepositories } from "./postgres-repositories.js";
 
 function nullableBigInt(value: unknown): bigint | null {
   if (value === null || value === undefined) return null;

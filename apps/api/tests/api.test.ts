@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createServer } from "../src/http/createServer.js";
+import { createServer } from "../src/http/create-server.js";
 import type { ConfidentialIndexer, ReadModel } from "@confidential-indexer/core";
 
 const readModel: ReadModel = {

@@ -4,7 +4,7 @@ import { node } from "@zama-fhe/sdk/node";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { createPublicClient, createWalletClient, defineChain, http, type Chain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import type { ZamaSdkFactory, ZamaSdkLike } from "./ZamaDecryptionProvider.js";
+import type { ZamaSdkFactory, ZamaSdkLike } from "./zama-decryption-provider.js";
 
 export interface ZamaNetworkConfig {
   chainId: number;

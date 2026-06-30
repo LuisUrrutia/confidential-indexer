@@ -1,4 +1,4 @@
 export * from "./domain.js";
 export * from "./interfaces.js";
 export * from "./fakes.js";
-export * from "./ConfidentialIndexer.js";
+export * from "./confidential-indexer.js";

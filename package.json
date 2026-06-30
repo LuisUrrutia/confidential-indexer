@@ -9,7 +9,7 @@
     "docker:prod": "docker compose up --build",
     "live:accounts": "tsx packages/zama/scripts/create-live-accounts.ts",
     "live:deploy": "forge build && node --env-file=${LIVE_ENV_FILE:-.env.live} --import tsx packages/zama/scripts/deploy-contract.ts --update-env",
-    "live:scan": "node --env-file=${LIVE_ENV_FILE:-.env.live} --import tsx apps/hyperindex/src/scanOnce.ts",
+    "live:scan": "node --env-file=${LIVE_ENV_FILE:-.env.live} --import tsx apps/hyperindex/src/scan-once.ts",
     "live:transfer": "node --env-file=${LIVE_ENV_FILE:-.env.live} --import tsx packages/zama/scripts/transfer-and-delegate.ts",
     "format:check": "oxfmt --check .",
     "lint": "oxlint .",

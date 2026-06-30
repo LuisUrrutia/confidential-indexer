@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ActivityQuery, BalanceQuery, TransferQuery } from "@confidential-indexer/core";
 import { z } from "zod";
-import type { CreateServerDeps } from "./createServer.js";
+import type { CreateServerDeps } from "./create-server.js";
 
 const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
 const decryptionStatusSchema = z.enum([

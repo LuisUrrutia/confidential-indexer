@@ -12,7 +12,7 @@ import {
   PostgresRepositories,
   runMigrations,
 } from "@confidential-indexer/db";
-import { createServer } from "../src/http/createServer.js";
+import { createServer } from "../src/http/create-server.js";
 
 const databaseUrl =
   process.env.DATABASE_URL ?? "postgres://indexer:indexer@localhost:5432/confidential_indexer";

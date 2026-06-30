@@ -4,7 +4,7 @@ This app owns raw chain indexing. The production path is an Envio HyperIndex pro
 
 - `config.yaml` declares the ERC-7984 token contract and ACL contract.
 - `schema.graphql` defines the normalized `HyperindexEvent` table.
-- `src/handlers/erc7984.ts` registers Envio handlers that write rows through `envioHandlers.ts`.
+- `src/handlers/erc7984.ts` registers Envio handlers that write rows through `envio-handlers.ts`.
 
 The Decryption/API Service consumes rows from `hyperindex_events` through `HyperindexPollingEventSource`.
 The normalized shape includes:
@@ -19,4 +19,4 @@ The normalized shape includes:
 - transfer fields: `from_address`, `to_address`, `receiver`, `encrypted_amount`, `cleartext_amount`, `unwrap_request_id`
 - delegation fields: `delegator`, `delegate`, `expires_at`
 
-`pnpm --filter @confidential-indexer/hyperindex scan:demo` keeps the original local viem scanner available as a demo/manual diagnostic fallback. It is not the primary production indexing path.
+For live demos and manual Sepolia scans, use the root `pnpm live:scan` script.

@@ -12,8 +12,8 @@ import {
   ZamaDecryptionProvider,
 } from "@confidential-indexer/zama";
 import { loadConfig } from "./config.js";
-import { createServer } from "./http/createServer.js";
-import { runLoop } from "./workers/runLoop.js";
+import { createServer } from "./http/create-server.js";
+import { runLoop } from "./workers/run-loop.js";
 
 const config = loadConfig();
 const appPool = createPool(config.databaseUrl);

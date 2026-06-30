@@ -1,5 +1,5 @@
 import type { ConfidentialIndexer } from "@confidential-indexer/core";
-import { runOnce } from "./runOnce.js";
+import { runOnce } from "./run-once.js";
 
 export function runLoop(indexer: ConfidentialIndexer, intervalMs: number): { stop: () => void } {
   let stopped = false;

@@ -1,1 +1,1 @@
-export * from "./HyperindexPollingEventSource.js";
+export * from "./hyperindex-polling-event-source.js";

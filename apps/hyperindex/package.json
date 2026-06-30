@@ -7,7 +7,6 @@
     "build": "tsc -p tsconfig.json",
     "codegen": "envio codegen",
     "dev": "envio dev",
-    "scan:demo": "tsx src/scanOnce.ts",
     "start": "envio start",
     "stop": "envio stop",
     "typecheck": "tsc -p tsconfig.json --noEmit"

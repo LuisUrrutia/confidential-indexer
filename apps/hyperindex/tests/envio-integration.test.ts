@@ -7,7 +7,7 @@ import {
   type EnvioAclEvent,
   type EnvioTokenEvent,
   type HyperindexEventWriter,
-} from "../src/envioHandlers.js";
+} from "../src/envio-handlers.js";
 
 const tokenAddress = "0x0000000000000000000000000000000000000001" as Address;
 const delegate = "0x00000000000000000000000000000000000000dd" as Address;
