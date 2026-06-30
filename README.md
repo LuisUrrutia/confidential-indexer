@@ -124,7 +124,7 @@ Delegation can take 1-2 minutes to propagate through the gateway. During that wi
 
 - `apps/hyperindex`: chain indexing configuration and event capture.
 - `apps/api`: decryption workers and HTTP API.
-- `packages/core`: domain interfaces and orchestration.
+- `packages/core`: confidential-token vocabulary and orchestration seams.
 - `packages/db`: Postgres schema and read-model adapters.
 - `packages/zama`: Zama SDK adapter.
 - `packages/hyperindex-adapter`: adapter from Hyperindex output to normalized events.

@@ -1,7 +1,7 @@
 import type { Address, Hex, IndexedEvent } from "@confidential-indexer/core";
 import pg from "pg";
 import { normalizeTokenEvent, type TokenEventMetadata } from "./erc7984-events.js";
-import { toExpirationDate } from "./time.js";
+import { toExpirationDate } from "./epoch-expiration.js";
 
 export type EnvioValue = bigint | number | string;
 

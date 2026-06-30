@@ -1,9 +1,9 @@
 import { createConfidentialIndexer } from "@confidential-indexer/core";
 import {
-  createPool,
+  createPostgresPool,
   PostgresReadModel,
-  PostgresRepositories,
-  runMigrations,
+  PostgresRepositorySet,
+  runSchemaMigrations,
 } from "@confidential-indexer/db";
 import { HyperindexPollingEventSource } from "@confidential-indexer/hyperindex-adapter";
 import {
@@ -11,16 +11,16 @@ import {
   type ZamaNetworkConfig,
   ZamaDecryptionProvider,
 } from "@confidential-indexer/zama";
-import { loadConfig } from "./config.js";
-import { createServer } from "./http/create-server.js";
-import { runLoop } from "./workers/run-loop.js";
+import { loadConfig } from "./app-config.js";
+import { createPartnerApiServer } from "./http/http-server.js";
+import { runIndexerWorkerLoop } from "./workers/indexer-worker-loop.js";
 
 const config = loadConfig();
-const appPool = createPool(config.databaseUrl);
-const hyperindexPool = createPool(config.hyperindexDatabaseUrl);
-await runMigrations(appPool);
+const appPool = createPostgresPool(config.databaseUrl);
+const hyperindexPool = createPostgresPool(config.hyperindexDatabaseUrl);
+await runSchemaMigrations(appPool);
 
-const repos = new PostgresRepositories(appPool, "hyperindex");
+const repos = new PostgresRepositorySet(appPool, "hyperindex");
 const readModel = new PostgresReadModel(appPool, "hyperindex");
 const eventSource = new HyperindexPollingEventSource({
   pool: hyperindexPool,
@@ -57,9 +57,9 @@ const indexer = createConfidentialIndexer({
   delegations: repos.delegations,
 });
 
-runLoop(indexer, config.workerIntervalMs);
+runIndexerWorkerLoop(indexer, config.workerIntervalMs);
 
-const app = createServer({ readModel, indexer, adminApiKey: config.adminApiKey });
+const app = createPartnerApiServer({ readModel, indexer, adminApiKey: config.adminApiKey });
 await app.listen({ host: config.host, port: config.port });
 
 const close = async () => {

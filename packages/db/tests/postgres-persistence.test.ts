@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
-  createPool,
+  createPostgresPool,
   PostgresReadModel,
-  PostgresRepositories,
-  runMigrations,
+  PostgresRepositorySet,
+  runSchemaMigrations,
 } from "../src/index.js";
 import type { IndexedEvent } from "@confidential-indexer/core";
 
@@ -26,14 +26,14 @@ const event: IndexedEvent = {
 
 describe("Postgres repositories", () => {
   it("stores pending transfers and exposes decrypted balances", async () => {
-    const pool = createPool(databaseUrl);
-    await runMigrations(pool);
+    const pool = createPostgresPool(databaseUrl);
+    await runSchemaMigrations(pool);
     const schema = `test_${randomUUID().replaceAll("-", "")}`;
     await pool.query(`create schema ${schema}`);
     await pool.query(`set search_path to ${schema}, public`);
-    await runMigrations(pool);
+    await runSchemaMigrations(pool);
 
-    const repos = new PostgresRepositories(pool, "hyperindex");
+    const repos = new PostgresRepositorySet(pool, "hyperindex");
     const readModel = new PostgresReadModel(pool, "hyperindex");
 
     await repos.transfers.upsertIndexedEvent(event);
@@ -58,14 +58,14 @@ describe("Postgres repositories", () => {
   });
 
   it("reports pending unshield activity pressure in health", async () => {
-    const pool = createPool(databaseUrl);
-    await runMigrations(pool);
+    const pool = createPostgresPool(databaseUrl);
+    await runSchemaMigrations(pool);
     const schema = `test_${randomUUID().replaceAll("-", "")}`;
     await pool.query(`create schema ${schema}`);
     await pool.query(`set search_path to ${schema}, public`);
-    await runMigrations(pool);
+    await runSchemaMigrations(pool);
 
-    const repos = new PostgresRepositories(pool, "hyperindex");
+    const repos = new PostgresRepositorySet(pool, "hyperindex");
     const readModel = new PostgresReadModel(pool, "hyperindex");
 
     await repos.activities.upsertIndexedEvent({
@@ -96,14 +96,14 @@ describe("Postgres repositories", () => {
   });
 
   it("deduplicates transfer activity and reports stored scan lag", async () => {
-    const pool = createPool(databaseUrl);
-    await runMigrations(pool);
+    const pool = createPostgresPool(databaseUrl);
+    await runSchemaMigrations(pool);
     const schema = `test_${randomUUID().replaceAll("-", "")}`;
     await pool.query(`create schema ${schema}`);
     await pool.query(`set search_path to ${schema}, public`);
-    await runMigrations(pool);
+    await runSchemaMigrations(pool);
 
-    const repos = new PostgresRepositories(pool, "hyperindex");
+    const repos = new PostgresRepositorySet(pool, "hyperindex");
     const readModel = new PostgresReadModel(pool, "hyperindex");
 
     await repos.transfers.upsertIndexedEvent(event);

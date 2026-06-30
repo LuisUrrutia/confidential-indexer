@@ -6,12 +6,12 @@ import {
   InMemoryIndexedEventSource,
 } from "@confidential-indexer/core/testing";
 import {
-  createPool,
+  createPostgresPool,
   PostgresReadModel,
-  PostgresRepositories,
-  runMigrations,
+  PostgresRepositorySet,
+  runSchemaMigrations,
 } from "@confidential-indexer/db";
-import { createServer } from "../src/http/create-server.js";
+import { createPartnerApiServer } from "../src/http/http-server.js";
 
 const databaseUrl =
   process.env.DATABASE_URL ?? "postgres://indexer:indexer@localhost:5432/confidential_indexer";
@@ -35,13 +35,13 @@ async function createHarness(
   events: IndexedEvent[],
   configureDecryption: (provider: InMemoryDecryptionProvider) => void,
 ) {
-  const pool = createPool(databaseUrl);
+  const pool = createPostgresPool(databaseUrl);
   const schema = `pipeline_${randomUUID().replaceAll("-", "")}`;
   await pool.query(`create schema ${schema}`);
   await pool.query(`set search_path to ${schema}, public`);
-  await runMigrations(pool);
+  await runSchemaMigrations(pool);
 
-  const repos = new PostgresRepositories(pool, "hyperindex");
+  const repos = new PostgresRepositorySet(pool, "hyperindex");
   const readModel = new PostgresReadModel(pool, "hyperindex");
   const provider = new InMemoryDecryptionProvider();
   configureDecryption(provider);
@@ -56,7 +56,7 @@ async function createHarness(
     activities: repos.activities,
     delegations: repos.delegations,
   });
-  const app = createServer({ readModel, indexer, adminApiKey: "secret" });
+  const app = createPartnerApiServer({ readModel, indexer, adminApiKey: "secret" });
   return { pool, app, indexer };
 }
 

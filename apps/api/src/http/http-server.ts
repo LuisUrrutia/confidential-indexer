@@ -1,15 +1,15 @@
 import Fastify from "fastify";
 import type { ConfidentialIndexer, ReadModel } from "@confidential-indexer/core";
-import { registerRoutes } from "./routes.js";
+import { registerPartnerApiRoutes } from "./partner-api-routes.js";
 
-export interface CreateServerDeps {
+export interface PartnerApiServerDeps {
   readModel: ReadModel;
   indexer: ConfidentialIndexer;
   adminApiKey: string;
 }
 
-export function createServer(deps: CreateServerDeps) {
+export function createPartnerApiServer(deps: PartnerApiServerDeps) {
   const app = Fastify({ logger: false });
-  registerRoutes(app, deps);
+  registerPartnerApiRoutes(app, deps);
   return app;
 }

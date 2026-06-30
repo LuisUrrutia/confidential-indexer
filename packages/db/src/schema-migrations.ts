@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Pool } from "./connection.js";
+import type { PostgresPool } from "./postgres-pool.js";
 
-export async function runMigrations(pool: Pool): Promise<void> {
+export async function runSchemaMigrations(pool: PostgresPool): Promise<void> {
   const here = dirname(fileURLToPath(import.meta.url));
   const migrationPath = join(here, "..", "migrations", "001_initial.sql");
   const sql = await readFile(migrationPath, "utf8");

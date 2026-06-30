@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toDate, toExpirationDate } from "../src/time.js";
+import { toDate, toExpirationDate } from "../src/epoch-expiration.js";
 
 describe("live scan timestamp helpers", () => {
   it("treats zero delegation expiry as non-expiring", () => {

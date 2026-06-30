@@ -1,6 +1,6 @@
 import { privateKeyToAccount } from "viem/accounts";
 import type { Hex } from "viem";
-import { createZamaSdkFactory } from "../src/create-zama-sdk-factory.js";
+import { createZamaSdkFactory } from "../src/zama-sdk-factory.js";
 
 interface LiveToken {
   confidentialTransfer(

@@ -8,21 +8,21 @@ import type {
   TransferQuery,
   TransferPage,
 } from "@confidential-indexer/core";
-import type { Pool } from "./connection.js";
-import { PostgresRepositories } from "./postgres-repositories.js";
+import type { PostgresPool } from "./postgres-pool.js";
+import { PostgresRepositorySet } from "./postgres-repository-set.js";
 
 function nullableBigInt(value: unknown): bigint | null {
   if (value === null || value === undefined) return null;
   return typeof value === "bigint" ? value : BigInt(value as string | number);
 }
 export class PostgresReadModel implements ReadModel {
-  private readonly repos: PostgresRepositories;
+  private readonly repos: PostgresRepositorySet;
 
   constructor(
-    private readonly pool: Pool,
+    private readonly pool: PostgresPool,
     private readonly sourceName: string,
   ) {
-    this.repos = new PostgresRepositories(pool, sourceName);
+    this.repos = new PostgresRepositorySet(pool, sourceName);
   }
 
   async getBalances(query: BalanceQuery): Promise<BalancePage> {

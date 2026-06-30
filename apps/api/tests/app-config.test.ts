@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadConfig } from "../src/config.js";
+import { loadConfig } from "../src/app-config.js";
 
 const privateKey = `0x${"1".repeat(64)}`;
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HyperindexPollingEventSource } from "../src/index.js";
 
-class FakePool {
+class StaticHyperindexPool {
   async query(_sql: string, _params: unknown[]) {
     return {
       rows: [
@@ -24,7 +24,10 @@ class FakePool {
 
 describe("HyperindexPollingEventSource", () => {
   it("normalizes Hyperindex rows into IndexedEventBatch", async () => {
-    const source = new HyperindexPollingEventSource({ pool: new FakePool(), limit: 10 });
+    const source = new HyperindexPollingEventSource({
+      pool: new StaticHyperindexPool(),
+      limit: 10,
+    });
     const batch = await source.nextBatch(null);
 
     expect(batch.events[0]).toMatchObject({

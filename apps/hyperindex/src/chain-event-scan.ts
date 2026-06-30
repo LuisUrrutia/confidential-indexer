@@ -9,7 +9,7 @@ import {
   type Hex,
   type PublicClient,
 } from "viem";
-import { toDate, toExpirationDate } from "./time.js";
+import { toDate, toExpirationDate } from "./epoch-expiration.js";
 
 interface TokenConfig {
   address: Address;

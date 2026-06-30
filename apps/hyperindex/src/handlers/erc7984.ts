@@ -7,7 +7,7 @@ import {
   type EnvioAclEvent,
   type EnvioTokenEvent,
   type HyperindexEventWriter,
-} from "../envio-handlers.js";
+} from "../envio-event-writer.js";
 
 type TokenEventName = EnvioTokenEvent["eventName"];
 type AclEventName = EnvioAclEvent["eventName"];

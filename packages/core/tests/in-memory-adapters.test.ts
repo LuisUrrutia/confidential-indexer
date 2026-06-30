@@ -15,7 +15,7 @@ const event: IndexedEvent = {
   encryptedAmount: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 };
 
-describe("core testing adapters", () => {
+describe("in-memory core adapters", () => {
   it("returns indexed events after a cursor", async () => {
     const source = new InMemoryIndexedEventSource([event]);
 
@@ -25,7 +25,7 @@ describe("core testing adapters", () => {
     expect(batch.nextCursor).toEqual({ blockNumber: 10n, logIndex: 0 });
   });
 
-  it("returns configured fake decrypted amounts", async () => {
+  it("returns configured decrypted amounts", async () => {
     const provider = new InMemoryDecryptionProvider();
     provider.setAmount(event.encryptedAmount, 25n);
 

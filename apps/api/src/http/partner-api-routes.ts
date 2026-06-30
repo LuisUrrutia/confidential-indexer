@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ActivityQuery, BalanceQuery, TransferQuery } from "@confidential-indexer/core";
 import { z } from "zod";
-import type { CreateServerDeps } from "./create-server.js";
+import type { PartnerApiServerDeps } from "./http-server.js";
 
 const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
 const decryptionStatusSchema = z.enum([
@@ -30,7 +30,7 @@ function stringifyBigInts(value: unknown): unknown {
   return value;
 }
 
-export function registerRoutes(app: FastifyInstance, deps: CreateServerDeps): void {
+export function registerPartnerApiRoutes(app: FastifyInstance, deps: PartnerApiServerDeps): void {
   app.get("/v1/balances/:holder", async (request, reply) => {
     const params = z.object({ holder: addressSchema }).parse(request.params);
     const query = z

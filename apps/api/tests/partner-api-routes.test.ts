@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createServer } from "../src/http/create-server.js";
+import { createPartnerApiServer } from "../src/http/http-server.js";
 import type { ConfidentialIndexer, ReadModel } from "@confidential-indexer/core";
 
 const readModel: ReadModel = {
@@ -68,7 +68,7 @@ const indexer: ConfidentialIndexer = {
 
 describe("HTTP API", () => {
   it("returns balances with bigint values serialized as strings", async () => {
-    const app = createServer({ readModel, indexer, adminApiKey: "secret" });
+    const app = createPartnerApiServer({ readModel, indexer, adminApiKey: "secret" });
     const response = await app.inject({
       method: "GET",
       url: "/v1/balances/0x00000000000000000000000000000000000000bb",
@@ -78,7 +78,7 @@ describe("HTTP API", () => {
   });
 
   it("returns pending transfer amounts as null with decryption metadata", async () => {
-    const app = createServer({ readModel, indexer, adminApiKey: "secret" });
+    const app = createPartnerApiServer({ readModel, indexer, adminApiKey: "secret" });
     const response = await app.inject({
       method: "GET",
       url: "/v1/transfers/0x00000000000000000000000000000000000000bb",
@@ -92,7 +92,7 @@ describe("HTTP API", () => {
   });
 
   it("protects admin backfill with API key", async () => {
-    const app = createServer({ readModel, indexer, adminApiKey: "secret" });
+    const app = createPartnerApiServer({ readModel, indexer, adminApiKey: "secret" });
     const missingKey = await app.inject({
       method: "POST",
       url: "/admin/backfill",
