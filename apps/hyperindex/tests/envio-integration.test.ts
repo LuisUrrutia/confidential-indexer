@@ -74,6 +74,10 @@ describe("Envio HyperIndex integration", () => {
     ]);
 
     expect(config).toContain("handler: ./src/handlers/erc7984.ts");
+    expect(config).toContain("contracts:\n  - name: ConfidentialToken");
+    expect(config).toContain("chains:\n  - id: 31337\n    start_block: 0\n    rpc:");
+    expect(config).not.toContain("networks:");
+    expect(config).not.toContain("abi_file_path: ../abis/");
     expect(config).toContain(
       "ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)",
     );

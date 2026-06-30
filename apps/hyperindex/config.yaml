@@ -1,29 +1,34 @@
 name: confidential-indexer-hyperindex
 description: ERC-7984 confidential token and ACL event indexer
-networks:
-  - id: ${CHAIN_ID:-31337}
-    start_block: ${START_BLOCK:-0}
+
+contracts:
+  - name: ConfidentialToken
+    abi_file_path: ./abis/ERC7984.json
+    handler: ./src/handlers/erc7984.ts
+    events:
+      - event: ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)
+      - event: Wrap(address indexed to, uint256 roundedAmount, bytes32 encryptedWrappedAmount)
+      - event: UnwrapRequested(address indexed receiver, bytes32 encryptedAmount, bytes32 unwrapRequestId)
+      - event: UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
+  - name: ConfidentialAcl
+    abi_file_path: ./abis/FHEVMACL.json
+    handler: ./src/handlers/erc7984.ts
+    events:
+      - event: DelegatedForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate, uint64 newExpirationDate)
+      - event: RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)
+
+chains:
+  - id: 31337
+    start_block: 0
+    rpc:
+      url: http://127.0.0.1:8545
+      for: sync
     contracts:
       - name: ConfidentialToken
-        address:
-          - ${TOKEN_ADDRESS:-0x0000000000000000000000000000000000000001}
-        abi_file_path: ../abis/ERC7984.json
-        handler: ./src/handlers/erc7984.ts
-        events:
-          - event: ConfidentialTransfer(address indexed from, address indexed to, bytes32 indexed amount)
-          - event: Wrap(address indexed to, uint256 roundedAmount, bytes32 encryptedWrappedAmount)
-          - event: UnwrapRequested(address indexed receiver, bytes32 encryptedAmount, bytes32 unwrapRequestId)
-          - event: UnwrapFinalized(address indexed receiver, bytes32 indexed unwrapRequestId, bytes32 encryptedAmount, uint64 cleartextAmount)
+        address: "0x0000000000000000000000000000000000000001"
       - name: ConfidentialAcl
-        address:
-          - ${ACL_CONTRACT_ADDRESS:-0x0000000000000000000000000000000000000002}
-        abi_file_path: ../abis/FHEVMACL.json
-        handler: ./src/handlers/erc7984.ts
-        events:
-          - event: DelegatedForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate, uint64 newExpirationDate)
-          - event: RevokedDelegationForUserDecryption(address indexed delegator, address indexed delegate, address contractAddress, uint64 delegationCounter, uint64 oldExpirationDate)
+        address: "0x0000000000000000000000000000000000000002"
+
 field_selection:
   transaction_fields:
     - hash
-  block_fields:
-    - timestamp
