@@ -14,7 +14,7 @@
     "@confidential-indexer/db": "workspace:*",
     "@confidential-indexer/hyperindex-adapter": "workspace:*",
     "@confidential-indexer/zama": "workspace:*",
-    "fastify": "^5.9.0",
+    "fastify": "^5.12.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
